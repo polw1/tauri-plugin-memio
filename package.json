@@ -1,0 +1,8 @@
+{
+  "name": "memio-root",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "android": "node ./scripts/android.js"
+  }
+}
