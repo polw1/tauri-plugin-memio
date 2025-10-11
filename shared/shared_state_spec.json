@@ -1,0 +1,10 @@
+{
+  "magic_hex": "0x545552424F534852",
+  "header_size": 64,
+  "offsets": {
+    "magic": 0,
+    "version": 8,
+    "length": 16
+  },
+  "endianness": "little"
+}
