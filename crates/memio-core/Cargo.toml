@@ -1,0 +1,25 @@
+[package]
+name = "memio-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Core types and state management for MemioTauri"
+
+[build-dependencies]
+serde_json = "1.0"
+
+[dependencies]
+rkyv.workspace = true
+bytecheck.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+
+memio-macros = { path = "../memio-macros" }
+
+[dev-dependencies]
+criterion = "0.5"
+
+[[bench]]
+name = "serialization"
+path = "benches/serialization.rs"
+harness = false
