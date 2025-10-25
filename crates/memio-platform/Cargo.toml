@@ -1,0 +1,18 @@
+[package]
+name = "memio-platform"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Platform-specific shared memory implementations for MemioTauri"
+
+[dependencies]
+memio-core = { path = "../memio-core" }
+thiserror.workspace = true
+tracing.workspace = true
+once_cell = "1.20"
+
+[target.'cfg(target_os = "linux")'.dependencies]
+memmap2.workspace = true
+
+[features]
+default = []
