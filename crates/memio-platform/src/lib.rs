@@ -1,0 +1,146 @@
+//! Memio region implementations for supported platforms.
+//!
+//! Includes platform-specific modules for memio region operations.
+//!
+//! # Supported Platforms
+//!
+//! - **Linux**: Uses `/dev/shm` for POSIX memio region via memory-mapped files
+//!
+//! # Usage
+//!
+//! ```ignore
+//! use memio_platform::{platform_factory, Platform};
+//!
+//! // Get the appropriate factory for the current platform
+//! let factory = platform_factory();
+//!
+//! // Create a memio region
+//! let mut region = factory.create("my_state", 1024 * 1024)?;
+//!
+//! // Write data
+//! region.write(1, b"hello world")?;
+//! ```
+
+#[cfg(target_os = "linux")]
+pub mod linux;
+
+// Platform-specific utilities (Linux only for now)
+#[cfg(target_os = "linux")]
+pub mod shared_ring;
+#[cfg(target_os = "linux")]
+pub mod shared_file;
+
+// High-level helpers
+pub mod registry;
+pub mod memio_shared;
+
+/// Platform identifier for runtime detection.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum Platform {
+    Linux,
+    MacOS,
+    Wasm,
+    Unknown,
+}
+
+impl Platform {
+    /// Returns the current platform at compile time.
+    pub const fn current() -> Self {
+        #[cfg(target_os = "linux")]
+        {
+            Platform::Linux
+        }
+        #[cfg(target_os = "macos")]
+        {
+            Platform::MacOS
+        }
+        #[cfg(all(
+            target_arch = "wasm32",
+            not(any(target_os = "linux", target_os = "macos"))
+        ))]
+        {
+            Platform::Wasm
+        }
+        #[cfg(not(any(
+            target_os = "linux",
+            target_os = "macos",
+            target_arch = "wasm32"
+        )))]
+        {
+            Platform::Unknown
+        }
+    }
+
+    /// Returns a human-readable name for the platform.
+    pub const fn name(&self) -> &'static str {
+        match self {
+            Platform::Linux => "linux",
+            Platform::MacOS => "macos",
+            Platform::Wasm => "wasm",
+            Platform::Unknown => "unknown",
+        }
+    }
+}
+
+impl std::fmt::Display for Platform {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.name())
+    }
+}
+
+/// Returns the appropriate memio region factory for the current platform.
+///
+/// This function provides runtime platform selection, returning a boxed factory
+/// that implements the `SharedMemoryFactory` trait.
+///
+/// # Panics
+///
+/// Panics if called on an unsupported platform.
+///
+/// # Example
+///
+/// ```ignore
+/// use memio_platform::platform_factory;
+///
+/// let factory = platform_factory();
+/// let region = factory.create("state", 4096)?;
+/// ```
+#[cfg(target_os = "linux")]
+pub fn platform_factory() -> Box<linux::LinuxSharedMemoryFactory> {
+    Box::new(linux::LinuxSharedMemoryFactory::new())
+}
+
+#[cfg(not(any(target_os = "linux")))]
+pub fn platform_factory() -> ! {
+    panic!(
+        "No shared memory implementation available for platform: {}",
+        Platform::current()
+    )
+}
+
+// Re-exports for convenience
+#[cfg(target_os = "linux")]
+pub use linux::{LinuxSharedMemoryFactory, LinuxSharedMemoryRegion, cleanup_orphaned_files};
+
+// Linux-specific utilities
+#[cfg(target_os = "linux")]
+pub use shared_ring::SharedRingBuffer;
+#[cfg(target_os = "linux")]
+pub use shared_file::SharedFileCache;
+
+// High-level helpers
+pub mod memio_manager;
+pub use registry::SharedRegistry;
+pub use memio_shared::MemioShared;
+pub use memio_manager::{MemioManager, memio_manager, ReadResult, WriteResult};
+#[cfg(target_os = "linux")]
+pub use memio_shared::LinuxMemioShared;
+
+// Re-export core contracts
+pub use memio_core::{
+    BoxedFactory, BoxedRegion, SharedMemoryError, SharedMemoryFactory, SharedMemoryRegion,
+    SharedStateInfo,
+};
+
+// Re-export header constants
+pub use memio_core::{SHARED_STATE_HEADER_SIZE, SHARED_STATE_MAGIC};
