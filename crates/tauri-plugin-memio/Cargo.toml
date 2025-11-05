@@ -1,0 +1,23 @@
+[package]
+name = "tauri-plugin-memio"
+version = "0.1.0"
+edition = "2021"
+build = "build.rs"
+links = "tauri-plugin-memio"
+description = "Memio shared-memory integration for Tauri (Linux)."
+license = "MIT"
+
+[lib]
+name = "tauri_plugin_memio"
+path = "src/lib.rs"
+
+[dependencies]
+tauri = { version = "2", default-features = false, features = ["wry"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+memio-core = { path = "../memio-core" }
+memio-platform = { path = "../memio-platform" }
+tracing = "0.1"
+
+[build-dependencies]
+tauri-plugin = { version = "2.4", features = ["build"] }
