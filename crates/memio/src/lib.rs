@@ -1,0 +1,139 @@
+//! # MemioTauri Framework
+//!
+//! Memio region(or close memio region approach) for Tauri applications.
+//!
+//! This is the **single entry point** for MemioTauri. Just add `memio` to your
+//! dependencies and you have everything you need!
+//!
+//! # Quick Start
+//!
+//! ```toml
+//! [dependencies]
+//! memio = { path = "path/to/memio" }
+//! tauri = "2"
+//! ```
+//!
+//! ```rust,ignore
+//! use memio::prelude::*;
+//!
+//! // Create a unified manager (works on Linux)
+//! let manager = MemioManager::new()?;
+//! manager.create_buffer("state", 1024 * 1024)?;
+//! manager.write("state", 1, &data)?;
+//! ```
+//!
+//! # Module Organization
+//!
+//! - [`prelude`] - Import everything you need with `use memio::prelude::*`
+//! - [`MemioManager`] - Cross-platform unified API
+//! - [`MemioState`] - Type-safe state container with versioning
+//! - [`plugin`] - Tauri plugin (use `memio::plugin::init()`)
+
+// ============================================================================
+// RE-EXPORTS: Everything the user needs from one place
+// ============================================================================
+
+// Core types
+pub use memio_core::{
+    MemioState, 
+    NoOpRegion, 
+    SharedMemoryRegion, 
+    SharedStateInfo,
+    SharedMemoryError,
+    SharedMemoryFactory,
+    MemioError,
+    MemioResult,
+    MemioModel,  // Derive macro
+    MemioSchema,
+    MemioField,
+    MemioFieldType,
+    MemioScalarType,
+    Arena,
+};
+
+// Unified cross-platform API
+pub use memio_platform::{
+    MemioManager, 
+    memio_manager, 
+    ReadResult, 
+    WriteResult,
+    Platform,
+    platform_factory,
+};
+
+// Re-export rkyv for serialization
+pub use rkyv;
+
+// ============================================================================
+// TAURI PLUGIN
+// ============================================================================
+
+/// Tauri plugin for MemioTauri.
+///
+/// # Usage
+///
+/// ```rust,ignore
+/// use memio::plugin;
+///
+/// tauri::Builder::default()
+///     .plugin(memio::plugin::init())
+///     .setup(|app| {
+///         #[cfg(target_os = "linux")]
+///         memio::plugin::build_webview_windows(app)?;
+///         Ok(())
+///     })
+/// ```
+pub mod plugin {
+    pub use tauri_plugin_memio::init;
+    
+    #[cfg(target_os = "linux")]
+    pub use tauri_plugin_memio::build_webview_windows;
+}
+
+// ============================================================================
+// PRELUDE: Import everything with `use memio::prelude::*`
+// ============================================================================
+
+/// Prelude module - import everything you need with one line.
+///
+/// ```rust,ignore
+/// use memio::prelude::*;
+/// ```
+pub mod prelude {
+    // Core types
+    pub use crate::{
+        MemioManager,
+        MemioState,
+        MemioError,
+        MemioResult,
+        ReadResult,
+        WriteResult,
+        SharedStateInfo,
+    };
+    
+    // Derive macro
+    pub use memio_core::MemioModel;
+    
+    // rkyv traits for serialization
+    pub use rkyv::{Archive, Serialize, Deserialize};
+}
+
+// ============================================================================
+// PLATFORM-SPECIFIC APIs (For advanced use cases only)
+// ============================================================================
+
+/// Platform-specific implementations for advanced use cases.
+///
+/// Most users should use [`MemioManager`] instead.
+pub mod platform {
+    #[cfg(target_os = "linux")]
+    pub use memio_platform::{
+        LinuxSharedMemoryFactory, 
+        LinuxSharedMemoryRegion, 
+        LinuxMemioShared,
+        SharedFileCache, 
+        SharedRingBuffer, 
+        MemioShared,
+        SharedRegistry,
+    };
+}
