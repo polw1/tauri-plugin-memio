@@ -1,0 +1,148 @@
+# MemioTauri
+
+**High-performance shared memory for Tauri apps.** Zero-copy data transfer between Rust and JavaScript on Linux.
+
+---
+
+## Installation
+
+See [Building and Running](docs/Building.md) for complete setup instructions.
+
+**Quick install:**
+
+```toml
+# src-tauri/Cargo.toml
+[dependencies]
+memio = { path = "path/to/memioTauri/crates/memio" }
+```
+
+```json
+// package.json
+{
+  "dependencies": {
+    "memio-client": "file:path/to/memioTauri/packages/memio-client"
+  }
+}
+```
+
+---
+
+## Usage Examples
+
+### Backend → Frontend (Rust writes, JavaScript reads)
+
+**Rust:**
+```rust
+use memio::prelude::*;
+
+// Create shared buffer
+let manager = MemioManager::new()?;
+manager.create_buffer("state", 1024 * 1024)?; // 1MB
+
+// Write data (version provided by caller)
+let data = b"Hello from Rust!";
+manager.write("state", 1, data)?;
+```
+
+**JavaScript:**
+```typescript
+import { MemioClient } from 'memio-client';
+
+const memio = new MemioClient();
+
+// Wait for buffer to be ready
+await memio.waitForSharedMemory('state');
+
+// Read data
+const snapshot = memio.readSharedState();
+if (snapshot) {
+  console.log('Version:', snapshot.version);
+  console.log('Data:', new TextDecoder().decode(snapshot.data));
+}
+```
+
+---
+
+### Frontend → Backend (JavaScript writes, Rust reads)
+
+**JavaScript:**
+```typescript
+import { MemioClient } from 'memio-client';
+
+const memio = new MemioClient();
+
+// Write data to shared memory
+const data = new TextEncoder().encode('Hello from JS!');
+memio.writeSharedState(data);
+```
+
+**Rust:**
+```rust
+use memio::prelude::*;
+
+let manager = MemioManager::new()?;
+
+// Read data written by frontend
+let result = manager.read("state")?;
+println!("Version: {}", result.version);
+println!("Data: {:?}", String::from_utf8_lossy(&result.data));
+```
+
+---
+
+## Tauri Integration (minimal client setup)
+
+1) Register the plugin in your Rust app:
+
+```rust
+tauri::Builder::default()
+  .plugin(memio::plugin::init())
+  .invoke_handler(tauri::generate_handler![
+    // your app commands...
+  ])
+  .run(tauri::generate_context!())?;
+```
+
+2) Allow the Memio plugin in capabilities:
+
+```json
+// src-tauri/capabilities/default.json
+[
+  {
+    "identifier": "desktop",
+    "description": "Desktop permissions for the app",
+    "windows": ["main"],
+    "local": true,
+    "remote": {
+      "urls": ["http://tauri.localhost/*", "https://tauri.localhost/*"]
+    },
+    "permissions": ["memio:default"],
+    "platforms": ["linux"]
+  }
+]
+```
+
+3) Reference the capabilities in `tauri.conf.json`:
+
+```json
+{
+  "app": {
+    "security": {
+      "capabilities": ["desktop"]
+    }
+  }
+}
+```
+
+---
+
+## Documentation
+
+- [Building and Running](docs/Building.md)
+- [Linux Architecture](docs/Linux.md)
+
+---
+
+## License
+
+MIT
