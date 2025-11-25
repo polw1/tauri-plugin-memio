@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tauri + Vue + Typescript App</title>
+    <script>
+      // Early probe for MemioTauri bindings - store results for later display
+      window.__memioProbeResults = [];
+      function probe(label) {
+        const result = {
+          label: label,
+          memioSharedBuffer: typeof window.memioSharedBuffer,
+          __memioSharedBuffers: window.__memioSharedBuffers,
+          bufferKeys: window.__memioSharedBuffers ? Object.keys(window.__memioSharedBuffers) : [],
+          stateBuffer: window.__memioSharedBuffers?.state,
+          stateBufferType: window.__memioSharedBuffers?.state?.constructor?.name,
+        };
+        window.__memioProbeResults.push(result);
+        console.log('[MemioProbe]', label, result);
+      }
+      
+      probe('immediate');
+      setTimeout(() => probe('100ms'), 100);
+      setTimeout(() => probe('500ms'), 500);
+      setTimeout(() => probe('1000ms'), 1000);
+    </script>
+  </head>
+
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
