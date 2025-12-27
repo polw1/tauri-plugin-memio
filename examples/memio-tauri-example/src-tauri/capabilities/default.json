@@ -1,0 +1,19 @@
+[
+  {
+    "$schema": "../gen/schemas/desktop-schema.json",
+    "identifier": "desktop",
+    "description": "Desktop permissions for the example app",
+    "windows": ["main"],
+    "local": true,
+    "remote": {
+      "urls": [
+        "http://tauri.localhost/*",
+        "https://tauri.localhost/*"
+      ]
+    },
+    "permissions": [
+      "memio:default"
+    ],
+    "platforms": ["linux"]
+  }
+]
