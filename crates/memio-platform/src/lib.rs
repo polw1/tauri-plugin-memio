@@ -24,6 +24,9 @@
 #[cfg(target_os = "linux")]
 pub mod linux;
 
+#[cfg(target_os = "android")]
+pub mod android;
+
 // Platform-specific utilities (Linux only for now)
 #[cfg(target_os = "linux")]
 pub mod shared_ring;
@@ -38,6 +41,7 @@ pub mod memio_shared;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Platform {
     Linux,
+    Android,
     MacOS,
     Wasm,
     Unknown,
@@ -50,19 +54,24 @@ impl Platform {
         {
             Platform::Linux
         }
+        #[cfg(target_os = "android")]
+        {
+            Platform::Android
+        }
         #[cfg(target_os = "macos")]
         {
             Platform::MacOS
         }
         #[cfg(all(
             target_arch = "wasm32",
-            not(any(target_os = "linux", target_os = "macos"))
+            not(any(target_os = "linux", target_os = "android", target_os = "macos"))
         ))]
         {
             Platform::Wasm
         }
         #[cfg(not(any(
             target_os = "linux",
+            target_os = "android",
             target_os = "macos",
             target_arch = "wasm32"
         )))]
@@ -75,6 +84,7 @@ impl Platform {
     pub const fn name(&self) -> &'static str {
         match self {
             Platform::Linux => "linux",
+            Platform::Android => "android",
             Platform::MacOS => "macos",
             Platform::Wasm => "wasm",
             Platform::Unknown => "unknown",
@@ -110,6 +120,11 @@ pub fn platform_factory() -> Box<linux::LinuxSharedMemoryFactory> {
     Box::new(linux::LinuxSharedMemoryFactory::new())
 }
 
+#[cfg(target_os = "android")]
+pub fn platform_factory() -> Box<android::AndroidSharedMemoryFactory> {
+    Box::new(android::AndroidSharedMemoryFactory::new())
+}
+
 #[cfg(not(any(target_os = "linux")))]
 pub fn platform_factory() -> ! {
     panic!(
@@ -121,6 +136,16 @@ pub fn platform_factory() -> ! {
 // Re-exports for convenience
 #[cfg(target_os = "linux")]
 pub use linux::{LinuxSharedMemoryFactory, LinuxSharedMemoryRegion, cleanup_orphaned_files};
+
+#[cfg(target_os = "android")]
+pub use android::{AndroidSharedMemoryFactory, AndroidSharedMemoryRegion};
+
+// Android JNI-compatible functions
+#[cfg(target_os = "android")]
+pub use android::{
+    create_shared_region, get_shared_fd, get_shared_ptr, has_shared_region, list_shared_regions,
+    read_from_shared, write_to_shared,
+};
 
 // Linux-specific utilities
 #[cfg(target_os = "linux")]
