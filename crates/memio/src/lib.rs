@@ -16,7 +16,7 @@
 //! ```rust,ignore
 //! use memio::prelude::*;
 //!
-//! // Create a unified manager (works on Linux)
+//! // Create a unified manager (works on Linux and Android)
 //! let manager = MemioManager::new()?;
 //! manager.create_buffer("state", 1024 * 1024)?;
 //! manager.write("state", 1, &data)?;
@@ -136,4 +136,18 @@ pub mod platform {
         MemioShared,
         SharedRegistry,
     };
+
+    #[cfg(target_os = "android")]
+    pub use memio_platform::{
+        get_shared_ptr, 
+        has_shared_region, 
+        list_shared_regions,
+        write_to_shared, 
+        AndroidSharedMemoryFactory, 
+        AndroidSharedMemoryRegion,
+        SHARED_STATE_HEADER_SIZE,
+        SHARED_STATE_MAGIC,
+    };
 }
+#[cfg(target_os = "android")]
+mod android_jni;
