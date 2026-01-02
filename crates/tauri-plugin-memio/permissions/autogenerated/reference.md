@@ -1,6 +1,6 @@
 ## Default Permission
 
-Default permissions for the Memio plugin (Linux)
+Default permissions for the Memio plugin (Linux + Android)
 
 #### This default permission set includes the following:
 

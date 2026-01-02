@@ -1,10 +1,10 @@
-//! Unified Memio commands for Linux.
+//! Unified Memio commands for Linux and Android.
 //!
 //! These commands provide a unified API for:
 //! - `memio_upload`: Upload file from URI/path to shared memory
 //! - `memio_read`: Read data from shared memory buffer
 //!
-//! The implementation uses Linux shared memory.
+//! The implementation uses the correct platform-specific method.
 
 use serde::{Deserialize, Serialize};
 use tauri::{command, AppHandle, Runtime, Manager};
@@ -30,7 +30,7 @@ pub struct ReadResult {
 ///
 /// # Arguments
 /// - `buffer_name`: Name of the shared memory buffer
-/// - `file_uri`: URI or path to the file
+/// - `file_uri`: URI or path to the file (content:// on Android, file:// elsewhere)
 #[command]
 pub async fn memio_upload<R: Runtime>(
     app: AppHandle<R>,
@@ -39,36 +39,56 @@ pub async fn memio_upload<R: Runtime>(
 ) -> Result<UploadResult, String> {
     let start = std::time::Instant::now();
 
-    use memio_platform::MemioManager;
+    #[cfg(target_os = "android")]
+    {
+        use crate::android::MemioAndroid;
+        let android_plugin = app.state::<MemioAndroid<R>>();
 
-    let file_path = if fileUri.starts_with("file://") {
-        fileUri.strip_prefix("file://").unwrap_or(&fileUri)
-    } else {
-        &fileUri
-    };
+        let response = android_plugin
+            .upload_file_from_uri(bufferName, fileUri)
+            .map_err(|e| e.to_string())?;
 
-    let data = std::fs::read(file_path)
-        .map_err(|e| format!("Failed to read file: {}", e))?;
+        Ok(UploadResult {
+            success: response.success,
+            bytes_written: response.bytes_written,
+            version: response.version,
+            duration_ms: start.elapsed().as_secs_f64() * 1000.0,
+        })
+    }
 
-    let manager = app
-        .try_state::<std::sync::Arc<MemioManager>>()
-        .ok_or("MemioManager not available")?;
+    #[cfg(not(target_os = "android"))]
+    {
+        use memio_platform::MemioManager;
 
-    let version = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|d| d.as_secs())
-        .unwrap_or(1);
+        let file_path = if fileUri.starts_with("file://") {
+            fileUri.strip_prefix("file://").unwrap_or(&fileUri)
+        } else {
+            &fileUri
+        };
 
-    manager
-        .write(&bufferName, version, &data)
-        .map_err(|e| format!("Failed to write to shared memory: {:?}", e))?;
+        let data = std::fs::read(file_path)
+            .map_err(|e| format!("Failed to read file: {}", e))?;
 
-    Ok(UploadResult {
-        success: true,
-        bytes_written: data.len(),
-        version: version as i64,
-        duration_ms: start.elapsed().as_secs_f64() * 1000.0,
-    })
+        let manager = app
+            .try_state::<std::sync::Arc<MemioManager>>()
+            .ok_or("MemioManager not available")?;
+
+        let version = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(1);
+
+        manager
+            .write(&bufferName, version, &data)
+            .map_err(|e| format!("Failed to write to shared memory: {:?}", e))?;
+
+        Ok(UploadResult {
+            success: true,
+            bytes_written: data.len(),
+            version: version as i64,
+            duration_ms: start.elapsed().as_secs_f64() * 1000.0,
+        })
+    }
 }
 
 /// Read data from shared memory buffer.

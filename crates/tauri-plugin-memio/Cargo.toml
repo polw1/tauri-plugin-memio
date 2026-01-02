@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 build = "build.rs"
 links = "tauri-plugin-memio"
-description = "Memio shared-memory integration for Tauri (Linux)."
+description = "Memio shared-memory integration for Tauri (Linux + Android)."
 license = "MIT"
 
 [lib]

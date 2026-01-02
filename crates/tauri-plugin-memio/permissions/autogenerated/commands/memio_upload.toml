@@ -7,7 +7,7 @@ description = "Allows uploading files to shared memory buffer"
 allow = ["memio_upload"]
 deny = []
 [permission.scope]
-allow = [{ linux = ["*"] }]
+allow = [{ linux = ["*"] }, { android = ["*"] }]
 
 [[permission]]
 identifier = "deny-memio-upload"

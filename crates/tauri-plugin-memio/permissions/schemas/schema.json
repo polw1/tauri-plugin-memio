@@ -260,6 +260,13 @@
           "enum": [
             "linux"
           ]
+        },
+        {
+          "description": "Android.",
+          "type": "string",
+          "enum": [
+            "android"
+          ]
         }
       ]
     },
@@ -291,10 +298,10 @@
           "markdownDescription": "Denies uploading files to shared memory buffer"
         },
         {
-          "description": "Default permissions for the Memio plugin (Linux)\n#### This default permission set includes:\n\n- `allow-memio-upload`\n- `allow-memio-read`",
+          "description": "Default permissions for the Memio plugin (Linux + Android)\n#### This default permission set includes:\n\n- `allow-memio-upload`\n- `allow-memio-read`",
           "type": "string",
           "const": "default",
-          "markdownDescription": "Default permissions for the Memio plugin (Linux)\n#### This default permission set includes:\n\n- `allow-memio-upload`\n- `allow-memio-read`"
+          "markdownDescription": "Default permissions for the Memio plugin (Linux + Android)\n#### This default permission set includes:\n\n- `allow-memio-upload`\n- `allow-memio-read`"
         }
       ]
     }

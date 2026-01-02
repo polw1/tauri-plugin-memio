@@ -1,7 +1,7 @@
 "$schema" = "schemas/schema.json"
 
 [default]
-description = "Default permissions for the Memio plugin (Linux)"
+description = "Default permissions for the Memio plugin (Linux + Android)"
 permissions = [
     "allow-memio-upload",
     "allow-memio-read"

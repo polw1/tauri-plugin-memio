@@ -3,6 +3,7 @@ fn main() {
         "memio_upload",
         "memio_read",
     ])
+    .android_path("android")
     .build();
 
     #[cfg(target_os = "linux")]

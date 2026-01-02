@@ -2,6 +2,8 @@ use tauri::plugin::{Builder, TauriPlugin};
 use tauri::Runtime;
 use tauri::Manager;
 
+#[cfg(target_os = "android")]
+pub mod android;
 #[cfg(target_os = "linux")]
 mod linux;
 
@@ -19,6 +21,18 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
 
     let builder = Builder::new("memio")
         .setup(move |app, api| {
+            #[cfg(target_os = "android")]
+            {
+                match android::register_android_plugin(api) {
+                    Ok(handle) => {
+                        let memio_android = android::MemioAndroid(handle);
+                        app.manage(memio_android);
+                    }
+                    Err(err) => {
+                        eprintln!("Memio Android plugin registration failed: {:?}", err);
+                    }
+                }
+            }
             #[cfg(target_os = "linux")]
             {
                 if let Err(err) = linux::replace_webview_windows_with_extensions(app) {
