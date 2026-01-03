@@ -7,6 +7,8 @@ import {
   SHARED_STATE_VERSION_OFFSET,
 } from './shared-state-spec';
 import { SHARED_MANIFEST_VERSION } from './shared-manifest-spec';
+import { getAndroidSharedBuffer, hasAndroidBridge, readSharedStateAndroid } from './platform/android';
+import { readSharedStateAndroidMemioProtocol } from './platform/android-memio-protocol';
 import { getLinuxSharedBuffer, hasLinuxSharedMemory } from './platform/linux';
 import type {
   SharedStateManifest,
@@ -17,16 +19,51 @@ import type {
 } from './shared-types';
 
 /**
+ * Helper to convert Uint8Array to Base64 for JavascriptInterface
+ */
+function uint8ArrayToBase64(bytes: Uint8Array): string {
+  let binary = '';
+  const chunkSize = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const chunk = bytes.subarray(i, i + chunkSize);
+    binary += String.fromCharCode(...chunk);
+  }
+  return btoa(binary);
+}
+
+/**
  * Detects the current platform based on available globals.
  */
 export function detectPlatform(): MemioPlatform {
+  const global = globalThis as unknown as MemioGlobalBase;
+
   if (hasLinuxSharedMemory()) {
-    return 'linux';
+    const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
+    if (!/Android/.test(ua)) {
+      return 'linux';
+    }
   }
+
+  if (hasAndroidBridge()) {
+    return 'android';
+  }
+
+  if (typeof navigator !== 'undefined' && /Android/.test(navigator.userAgent)) {
+    return 'android';
+  }
+
+  if (global.webkit?.messageHandlers?.memio) {
+    const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
+    if (/Android/.test(ua)) {
+      return 'android';
+    }
+  }
+
   const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
-  if (/Linux/.test(ua)) {
+  if (/Linux/.test(ua) && !/Android/.test(ua)) {
     return 'linux';
   }
+
   return 'unknown';
 }
 
@@ -34,7 +71,7 @@ export function detectPlatform(): MemioPlatform {
  * Checks if shared memory is available on the current platform.
  */
 export function isSharedMemoryAvailable(): boolean {
-  return hasLinuxSharedMemory();
+  return hasLinuxSharedMemory() || hasAndroidBridge();
 }
 
 export function getSharedManifest(): SharedStateManifest | null {
@@ -55,7 +92,7 @@ export function getSharedManifest(): SharedStateManifest | null {
 }
 
 export function getMemioSharedBuffer(name?: string): ArrayBuffer | Uint8Array | null {
-  return getLinuxSharedBuffer(name);
+  return getLinuxSharedBuffer(name) ?? getAndroidSharedBuffer(name);
 }
 
 /**
@@ -64,24 +101,32 @@ export function getMemioSharedBuffer(name?: string): ArrayBuffer | Uint8Array | 
 export async function readMemioSharedBuffer(
   name: string
 ): Promise<{ version: bigint; data: Uint8Array } | null> {
+  if (hasAndroidBridge()) {
+    const snapshot = await readSharedStateAndroidMemioProtocol(name);
+    if (!snapshot) {
+      return null;
+    }
+    const bytes = new Uint8Array(snapshot.view.rawBuffer);
+    return { version: snapshot.version, data: bytes };
+  }
+
   const buffer = getMemioSharedBuffer(name);
-  if (!buffer) {
-    return null;
+  if (buffer) {
+    const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
+    if (bytes.length < SHARED_STATE_HEADER_SIZE) {
+      console.warn(`[MemioClient] Linux: buffer too small (${bytes.length} < ${SHARED_STATE_HEADER_SIZE})`);
+      return null;
+    }
+
+    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    const version = view.getBigUint64(SHARED_STATE_VERSION_OFFSET, true);
+    const length = Number(view.getBigUint64(SHARED_STATE_LENGTH_OFFSET, true));
+    const data = bytes.subarray(SHARED_STATE_HEADER_SIZE, SHARED_STATE_HEADER_SIZE + length);
+
+    return { version, data };
   }
 
-  const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
-  if (bytes.length < SHARED_STATE_HEADER_SIZE) {
-    console.warn(`[MemioClient] Linux: buffer too small (${bytes.length} < ${SHARED_STATE_HEADER_SIZE})`);
-    return null;
-  }
-
-  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-  const version = view.getBigUint64(SHARED_STATE_VERSION_OFFSET, true);
-  const length = Number(view.getBigUint64(SHARED_STATE_LENGTH_OFFSET, true));
-  const data = bytes.subarray(SHARED_STATE_HEADER_SIZE, SHARED_STATE_HEADER_SIZE + length);
-
-  console.log(`[MemioClient] Linux: read ${data.length} bytes from '${name}' (version ${version})`);
-  return { version, data };
+  return null;
 }
 
 /**
@@ -95,8 +140,36 @@ export async function writeMemioSharedBuffer(
   const global = globalThis as any;
   const bytes = data instanceof Uint8Array ? data : new Uint8Array(data);
 
+  if (hasAndroidBridge()) {
+    const startTime = Date.now();
+    let attempts = 0;
+
+    while (Date.now() - startTime < timeoutMs) {
+      attempts++;
+
+      try {
+        const base64 = uint8ArrayToBase64(bytes);
+        const version = Date.now();
+
+        const bridge = global.__TAURI_MEMIO__ ?? global.MemioNative;
+        if (!bridge || typeof bridge.write !== 'function') {
+          throw new Error('Memio Android bridge not available');
+        }
+        bridge.write(name, version, base64);
+        return true;
+      } catch (error) {
+        console.debug(`[MemioClient] Android write attempt ${attempts} failed, retrying...`, error);
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+
+    console.error(`[MemioClient] Android: failed to write to buffer '${name}' after ${attempts} attempts`);
+    return false;
+  }
+
   if (typeof global.memioWriteSharedBuffer !== 'function') {
-    console.warn('[MemioClient] memioWriteSharedBuffer not available - Linux WebKit extension required');
+    console.warn('[MemioClient] memioWriteSharedBuffer not available - Linux WebKit extension or Android bridge required');
     return false;
   }
 
@@ -109,7 +182,6 @@ export async function writeMemioSharedBuffer(
     try {
       const result = global.memioWriteSharedBuffer(name, bytes);
       if (result === true) {
-        console.log(`[MemioClient] Successfully wrote ${bytes.length} bytes to buffer '${name}' (attempt ${attempts})`);
         return true;
       }
     } catch (error) {
@@ -134,7 +206,14 @@ export async function waitForSharedBuffer(
   const bufferName = name ?? 'state';
 
   while (Date.now() - startTime < timeoutMs) {
-    if (hasLinuxSharedMemory()) {
+    const hasLinux = hasLinuxSharedMemory();
+    const hasAndroid = hasAndroidBridge();
+
+    if (hasAndroid) {
+      return new Uint8Array(0);
+    }
+
+    if (hasLinux) {
       if (typeof (globalThis as any).memioSharedBuffer === 'function') {
         return new Uint8Array(0);
       }
@@ -203,6 +282,7 @@ export function writeSharedStateBuffer(
   return { version: nextVersion, length: dataBytes.byteLength };
 }
 
+export { readSharedStateAndroid };
 export type { SharedStateManifest, SharedStateSnapshot, SharedStateWriteResult, MemioPlatform };
 export {
   SHARED_STATE_HEADER_SIZE,

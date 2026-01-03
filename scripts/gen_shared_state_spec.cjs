@@ -46,6 +46,22 @@ const cHeader = `// Generated from shared/shared_state_spec.json. Do not edit by
 #endif // MEMIO_SHARED_STATE_SPEC_H
 `;
 
+// Kotlin constants for Android
+const kotlinConstants = `// Generated from shared/shared_state_spec.json. Do not edit by hand.
+// This file ensures Android uses the same constants as Rust.
+
+package com.memio.spec
+
+object MemioSpec {
+    const val MAGIC: Long = ${spec.magic_hex}L
+    const val HEADER_SIZE: Int = ${spec.header_size}
+    const val MAGIC_OFFSET: Int = ${spec.offsets.magic}
+    const val VERSION_OFFSET: Int = ${spec.offsets.version}
+    const val LENGTH_OFFSET: Int = ${spec.offsets.length}
+    const val ENDIANNESS: String = "${spec.endianness}"
+}
+`;
+
 const manifestSpecPath = resolve(root, "shared", "shared_manifest_spec.json");
 const manifestSpec = JSON.parse(readFileSync(manifestSpecPath, "utf-8"));
 const manifestTsModule = `// Generated from shared/shared_manifest_spec.json. Do not edit by hand.
@@ -69,8 +85,13 @@ writeFileSync(
   resolve(root, "extensions", "webkit-linux", "memio_spec.h"),
   cHeader
 );
+writeFileSync(
+  resolve(root, "crates", "tauri-plugin-memio", "android", "src", "main", "java", "com", "memio", "spec", "MemioSpec.kt"),
+  kotlinConstants
+);
 console.log("✅ Generated shared state spec files:");
 console.log("   - crates/memio-core/src/shared_state_spec.rs");
 console.log("   - packages/memio-client/src/shared-state-spec.ts");
 console.log("   - packages/memio-client/src/shared-manifest-spec.ts");
 console.log("   - extensions/webkit-linux/memio_spec.h");
+console.log("   - crates/tauri-plugin-memio/android/.../spec/MemioSpec.kt");

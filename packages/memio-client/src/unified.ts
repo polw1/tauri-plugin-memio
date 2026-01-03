@@ -1,9 +1,10 @@
 /**
- * Unified Memio API (Linux)
+ * Unified Memio API
  */
 
 import { invoke } from '@tauri-apps/api/core';
 import { detectPlatform, writeMemioSharedBuffer } from './shared-state';
+import { readSharedStateAndroidMemioProtocol } from './platform/android-memio-protocol';
 import { StateView } from './state-view';
 
 export interface MemioReadResult {
@@ -32,11 +33,16 @@ export async function memioRead(
   lastVersion?: bigint
 ): Promise<MemioReadResult | null> {
   const platform = detectPlatform();
-  if (platform !== 'linux') {
-    console.warn(`[Memio] Unsupported platform: ${platform}`);
-    return null;
+
+  switch (platform) {
+    case 'linux':
+      return readLinux(bufferName, lastVersion);
+    case 'android':
+      return readAndroid(bufferName, lastVersion);
+    default:
+      console.warn(`[Memio] Unsupported platform: ${platform}`);
+      return null;
   }
-  return readLinux(bufferName, lastVersion);
 }
 
 export async function memioWrite(
@@ -44,12 +50,18 @@ export async function memioWrite(
   data: Uint8Array | ArrayBuffer
 ): Promise<MemioWriteResult> {
   const platform = detectPlatform();
-  if (platform !== 'linux') {
-    throw new Error(`Unsupported platform: ${platform}`);
-  }
   const bytes = data instanceof ArrayBuffer ? new Uint8Array(data) : data;
   const start = performance.now();
-  return writeLinux(bufferName, bytes, start);
+
+  switch (platform) {
+    case 'linux':
+      return writeLinux(bufferName, bytes, start);
+    case 'android':
+      console.warn('[Memio] memioWrite on Android is slow. Consider using memioUpload with a file URI.');
+      return writeViaInvoke(bufferName, bytes, start);
+    default:
+      throw new Error(`Unsupported platform: ${platform}`);
+  }
 }
 
 export async function memioUpload(
@@ -76,11 +88,23 @@ export async function memioUpload(
 
 export async function memioUploadFile(
   bufferName: string,
-  file: File
+  file: File,
+  fileUri?: string
 ): Promise<MemioWriteResult> {
+  const platform = detectPlatform();
+  const start = performance.now();
+
+  if (platform === 'android') {
+    const global = globalThis as any;
+    const uri = fileUri ?? global.__MEMIO_FILE_URIS__?.file_0;
+    if (!uri) {
+      throw new Error('Android file URI not available. Pick the file again.');
+    }
+    return memioUpload(bufferName, uri);
+  }
+
   const buffer = await file.arrayBuffer();
   const bytes = new Uint8Array(buffer);
-  const start = performance.now();
   const success = await writeMemioSharedBuffer(bufferName, bytes);
 
   return {
@@ -122,6 +146,22 @@ async function readLinux(bufferName: string, lastVersion?: bigint): Promise<Memi
   };
 }
 
+async function readAndroid(bufferName: string, lastVersion?: bigint): Promise<MemioReadResult | null> {
+  const result = await readSharedStateAndroidMemioProtocol(bufferName, lastVersion);
+  if (!result) {
+    return null;
+  }
+
+  const data = result.view.bytes;
+
+  return {
+    data,
+    version: result.version,
+    length: result.length,
+    view: result.view,
+  };
+}
+
 async function writeLinux(bufferName: string, bytes: Uint8Array, start: number): Promise<MemioWriteResult> {
   const success = await writeMemioSharedBuffer(bufferName, bytes);
   return {
@@ -129,5 +169,24 @@ async function writeLinux(bufferName: string, bytes: Uint8Array, start: number):
     bytesWritten: success ? bytes.length : 0,
     version: BigInt(Date.now()),
     durationMs: performance.now() - start,
+  };
+}
+
+async function writeViaInvoke(bufferName: string, bytes: Uint8Array, start: number): Promise<MemioWriteResult> {
+  const result = await invoke<{
+    success: boolean;
+    bytesWritten: number;
+    version: number;
+    durationMs: number;
+  }>('plugin:memio|memio_upload', {
+    bufferName,
+    fileUri: `data:application/octet-stream;base64,${btoa(String.fromCharCode(...bytes))}`,
+  });
+
+  return {
+    success: result.success,
+    bytesWritten: result.bytesWritten,
+    version: BigInt(result.version),
+    durationMs: result.durationMs,
   };
 }

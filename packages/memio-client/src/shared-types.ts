@@ -11,7 +11,7 @@ export interface SharedStateWriteResult {
   length: number;
 }
 
-export type MemioPlatform = 'linux' | 'unknown';
+export type MemioPlatform = 'linux' | 'android' | 'unknown';
 
 export interface SharedStateManifest {
   version: number;
@@ -25,6 +25,34 @@ export interface MemioGlobalBase {
       memio?: { postMessage: (msg: unknown) => void };
     };
   };
+}
+
+export interface MemioAndroidGlobals extends MemioGlobalBase {
+  /**
+   * MemioNative is injected by MemioJsBridge.kt via WebView.addJavascriptInterface()
+   *
+   * NOTE: These methods are for metadata only. Actual data transfer uses:
+   * - READ: memio:// protocol (MemioWebViewClient) - zero Base64
+   * - WRITE: upload_file_from_uri (MemioPlugin) - zero Base64
+   */
+  MemioNative?: {
+    /** Get version number from shared memory */
+    getVersion: (name: string) => number;
+    /** List available shared memory buffers */
+    listBuffers: () => string;
+    /** Check if a buffer exists */
+    hasBuffer: (name: string) => boolean;
+    /** Write data into shared memory (Base64 payload) */
+    write?: (name: string, version: number, base64: string) => boolean;
+    /** Get buffer metadata (JSON) */
+    getBufferInfo: (name: string) => string | null;
+    /** Debug information (JSON) */
+    debug: () => string;
+  };
+  /** Version check */
+  memioGetVersion?: (name?: string) => number;
+  /** Flag indicating Android bridge is ready */
+  __memioAndroidReady?: boolean;
 }
 
 export interface MemioLinuxGlobals extends MemioGlobalBase {

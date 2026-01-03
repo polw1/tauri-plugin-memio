@@ -1,3 +1,10 @@
+import {
+  getAndroidSharedBuffer,
+  hasAndroidBridge,
+  readSharedStateAndroid,
+  readSharedStateAndroidAsync,
+  writeSharedStateAndroid,
+} from './platform/android';
 import { getLinuxSharedBuffer, hasLinuxSharedMemory } from './platform/linux';
 import type { SharedStateSnapshot, SharedStateWriteResult, MemioPlatform } from './shared-types';
 import type { SharedStateManifest } from './shared-types';
@@ -9,6 +16,7 @@ export interface SharedStateProvider {
   sharedManifest(): SharedStateManifest | null;
   getSharedBuffer(name?: string): ArrayBuffer | Uint8Array | null;
   readSharedState(name?: string, lastVersion?: bigint): SharedStateSnapshot | null;
+  readSharedStateAsync?(name?: string, lastVersion?: bigint): Promise<SharedStateSnapshot | null>;
   writeSharedState(name: string, data: ArrayBuffer | Uint8Array, version?: bigint): SharedStateWriteResult | null;
 }
 
@@ -46,6 +54,36 @@ class LinuxProvider implements SharedStateProvider {
   }
 }
 
+class AndroidProvider implements SharedStateProvider {
+  platform(): MemioPlatform {
+    return 'android';
+  }
+
+  isAvailable(): boolean {
+    return hasAndroidBridge();
+  }
+
+  sharedManifest(): SharedStateManifest | null {
+    return getSharedManifest();
+  }
+
+  getSharedBuffer(name?: string): ArrayBuffer | Uint8Array | null {
+    return getAndroidSharedBuffer(name);
+  }
+
+  readSharedState(name?: string, lastVersion?: bigint): SharedStateSnapshot | null {
+    return readSharedStateAndroid(name, lastVersion);
+  }
+
+  async readSharedStateAsync(name?: string, lastVersion?: bigint): Promise<SharedStateSnapshot | null> {
+    return readSharedStateAndroidAsync(name, lastVersion);
+  }
+
+  writeSharedState(name: string, data: ArrayBuffer | Uint8Array, version?: bigint): SharedStateWriteResult | null {
+    return writeSharedStateAndroid(name, data, version);
+  }
+}
+
 class UnknownProvider implements SharedStateProvider {
   platform(): MemioPlatform {
     return 'unknown';
@@ -73,6 +111,9 @@ class UnknownProvider implements SharedStateProvider {
 }
 
 export function createSharedStateProvider(): SharedStateProvider {
+  if (hasAndroidBridge()) {
+    return new AndroidProvider();
+  }
   if (hasLinuxSharedMemory()) {
     return new LinuxProvider();
   }

@@ -61,6 +61,10 @@ export class MemioClient {
     return this.readSharedStateNamed(this.config.bufferName, lastVersion);
   }
 
+  async readSharedStateAsync(lastVersion?: bigint): Promise<SharedStateSnapshot | null> {
+    return this.readSharedStateNamedAsync(this.config.bufferName, lastVersion);
+  }
+
   sharedManifest(): SharedStateManifest | null {
     return this.provider.sharedManifest();
   }
@@ -72,6 +76,18 @@ export class MemioClient {
       return null;
     }
     return snapshot;
+  }
+
+  async readSharedStateNamedAsync(name: string, lastVersion?: bigint): Promise<SharedStateSnapshot | null> {
+    if (this.provider.readSharedStateAsync) {
+      const snapshot = await this.provider.readSharedStateAsync(name, lastVersion);
+      if (!snapshot) {
+        this.log(`Shared buffer '${name}' not available (async)`);
+        return null;
+      }
+      return snapshot;
+    }
+    return this.readSharedStateNamed(name, lastVersion);
   }
 
   writeSharedState(data: ArrayBuffer | Uint8Array, version?: bigint): SharedStateWriteResult | null {
