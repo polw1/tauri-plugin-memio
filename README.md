@@ -1,6 +1,6 @@
 # MemioTauri
 
-**High-performance shared memory for Tauri apps.** Zero-copy data transfer between Rust and JavaScript on Linux.
+**High-performance shared memory for Tauri apps.** Zero-copy data transfer between Rust and JavaScript.
 
 ---
 
@@ -53,8 +53,8 @@ const memio = new MemioClient();
 // Wait for buffer to be ready
 await memio.waitForSharedMemory('state');
 
-// Read data
-const snapshot = memio.readSharedState();
+// Read data (async for Android, sync for Linux)
+const snapshot = await memio.readSharedStateAsync();
 if (snapshot) {
   console.log('Version:', snapshot.version);
   console.log('Data:', new TextDecoder().decode(snapshot.data));
@@ -92,6 +92,9 @@ println!("Data: {:?}", String::from_utf8_lossy(&result.data));
 
 ## Tauri Integration (minimal client setup)
 
+The goal is: the client only enables the Memio plugin, and Memio handles the
+platform-specific details (Android vs desktop).
+
 1) Register the plugin in your Rust app:
 
 ```rust
@@ -103,7 +106,7 @@ tauri::Builder::default()
   .run(tauri::generate_context!())?;
 ```
 
-2) Allow the Memio plugin in capabilities:
+2) Allow only the Memio plugin in capabilities:
 
 ```json
 // src-tauri/capabilities/default.json
@@ -118,6 +121,17 @@ tauri::Builder::default()
     },
     "permissions": ["memio:default"],
     "platforms": ["linux"]
+  },
+  {
+    "identifier": "android",
+    "description": "Android permissions for the app (about:* webview bootstrap)",
+    "windows": ["main"],
+    "local": true,
+    "remote": {
+      "urls": ["about:*"]
+    },
+    "permissions": ["memio:default"],
+    "platforms": ["android"]
   }
 ]
 ```
@@ -128,18 +142,22 @@ tauri::Builder::default()
 {
   "app": {
     "security": {
-      "capabilities": ["desktop"]
+      "capabilities": ["desktop", "android"]
     }
   }
 }
 ```
 
+This keeps the client config minimal while still allowing the Android WebView
+bootstrap URL (`about:blank`) to access the Memio commands.
+
 ---
 
 ## Documentation
 
-- [Building and Running](docs/Building.md)
-- [Linux Architecture](docs/Linux.md)
+- [Building and Running](docs/Building.md) - Setup and installation
+- [Linux Architecture](docs/Linux.md) - WebKit extension + mmap
+- [Android Architecture](docs/Android.md) - memio:// protocol + JNI
 
 ---
 

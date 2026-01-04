@@ -15,5 +15,20 @@
       "memio:default"
     ],
     "platforms": ["linux"]
+  },
+  {
+    "identifier": "android",
+    "description": "Android permissions for the example app (about:* webview bootstrap)",
+    "windows": ["main"],
+    "local": true,
+    "remote": {
+      "urls": [
+        "about:*"
+      ]
+    },
+    "permissions": [
+      "memio:default"
+    ],
+    "platforms": ["android"]
   }
 ]
