@@ -27,6 +27,9 @@ pub mod linux;
 #[cfg(target_os = "android")]
 pub mod android;
 
+#[cfg(target_os = "windows")]
+pub mod windows;
+
 // Platform-specific utilities (Linux only for now)
 #[cfg(target_os = "linux")]
 pub mod shared_ring;
@@ -43,6 +46,7 @@ pub enum Platform {
     Linux,
     Android,
     MacOS,
+    Windows,
     Wasm,
     Unknown,
 }
@@ -62,9 +66,13 @@ impl Platform {
         {
             Platform::MacOS
         }
+        #[cfg(target_os = "windows")]
+        {
+            Platform::Windows
+        }
         #[cfg(all(
             target_arch = "wasm32",
-            not(any(target_os = "linux", target_os = "android", target_os = "macos"))
+            not(any(target_os = "linux", target_os = "android", target_os = "macos", target_os = "windows"))
         ))]
         {
             Platform::Wasm
@@ -73,6 +81,7 @@ impl Platform {
             target_os = "linux",
             target_os = "android",
             target_os = "macos",
+            target_os = "windows",
             target_arch = "wasm32"
         )))]
         {
@@ -86,6 +95,7 @@ impl Platform {
             Platform::Linux => "linux",
             Platform::Android => "android",
             Platform::MacOS => "macos",
+            Platform::Windows => "windows",
             Platform::Wasm => "wasm",
             Platform::Unknown => "unknown",
         }
@@ -125,7 +135,12 @@ pub fn platform_factory() -> Box<android::AndroidSharedMemoryFactory> {
     Box::new(android::AndroidSharedMemoryFactory::new())
 }
 
-#[cfg(not(any(target_os = "linux")))]
+#[cfg(target_os = "windows")]
+pub fn platform_factory() -> Box<windows::WindowsSharedMemoryFactory> {
+    Box::new(windows::WindowsSharedMemoryFactory::new())
+}
+
+#[cfg(not(any(target_os = "linux", target_os = "android", target_os = "windows")))]
 pub fn platform_factory() -> ! {
     panic!(
         "No shared memory implementation available for platform: {}",
@@ -140,11 +155,21 @@ pub use linux::{LinuxSharedMemoryFactory, LinuxSharedMemoryRegion, cleanup_orpha
 #[cfg(target_os = "android")]
 pub use android::{AndroidSharedMemoryFactory, AndroidSharedMemoryRegion};
 
+#[cfg(target_os = "windows")]
+pub use windows::{WindowsSharedMemoryFactory, WindowsSharedMemoryRegion};
+
 // Android JNI-compatible functions
 #[cfg(target_os = "android")]
 pub use android::{
     create_shared_region, get_shared_fd, get_shared_ptr, has_shared_region, list_shared_regions,
     read_from_shared, write_to_shared,
+};
+
+// Windows helper functions (similar API to Android)
+#[cfg(target_os = "windows")]
+pub use windows::{
+    create_shared_region, get_version, has_shared_region, list_shared_regions, read_from_shared,
+    write_to_shared,
 };
 
 // Linux-specific utilities
