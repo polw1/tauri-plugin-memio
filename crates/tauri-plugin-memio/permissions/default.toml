@@ -1,8 +1,17 @@
 "$schema" = "schemas/schema.json"
 
 [default]
-description = "Default permissions for the Memio plugin (Linux + Android)"
+description = "Default permissions for the Memio plugin - allows zero-copy SharedBuffer operations"
 permissions = [
+    # Unified API commands
     "allow-memio-upload",
-    "allow-memio-read"
+    "allow-memio-read",
+    # Windows SharedBuffer API (zero-copy)
+    "allow-prepare-upload-buffer",
+    "allow-commit-upload-buffer",
+    "allow-send-download-buffer",
+    # Utility commands
+    "allow-create-shared-buffer-windows",
+    "allow-list-shared-buffers-windows",
+    "allow-has-shared-buffer"
 ]

@@ -1,0 +1,17 @@
+"$schema" = "../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-has-shared-buffer"
+description = "Enables the has_shared_buffer command without any pre-configured scope."
+[permission.commands]
+allow = ["has_shared_buffer"]
+deny = []
+[permission.scope]
+allow = [{ windows = ["*"] }]
+
+[[permission]]
+identifier = "deny-has-shared-buffer"
+description = "Denies the has_shared_buffer command without any pre-configured scope."
+[permission.commands]
+allow = []
+deny = ["has_shared_buffer"]

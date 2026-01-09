@@ -255,6 +255,20 @@
       "description": "Platform target.",
       "oneOf": [
         {
+          "description": "MacOS.",
+          "type": "string",
+          "enum": [
+            "macOS"
+          ]
+        },
+        {
+          "description": "Windows.",
+          "type": "string",
+          "enum": [
+            "windows"
+          ]
+        },
+        {
           "description": "Linux.",
           "type": "string",
           "enum": [
@@ -267,12 +281,79 @@
           "enum": [
             "android"
           ]
+        },
+        {
+          "description": "iOS.",
+          "type": "string",
+          "enum": [
+            "iOS"
+          ]
         }
       ]
     },
     "PermissionKind": {
       "type": "string",
       "oneOf": [
+        {
+          "description": "Enables the commit_upload_buffer command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-commit-upload-buffer",
+          "markdownDescription": "Enables the commit_upload_buffer command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the commit_upload_buffer command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-commit-upload-buffer",
+          "markdownDescription": "Denies the commit_upload_buffer command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the create_shared_buffer_windows command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-create-shared-buffer-windows",
+          "markdownDescription": "Enables the create_shared_buffer_windows command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the create_shared_buffer_windows command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-create-shared-buffer-windows",
+          "markdownDescription": "Denies the create_shared_buffer_windows command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the get_shared_buffer_version command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-get-shared-buffer-version",
+          "markdownDescription": "Enables the get_shared_buffer_version command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the get_shared_buffer_version command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-get-shared-buffer-version",
+          "markdownDescription": "Denies the get_shared_buffer_version command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the has_shared_buffer command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-has-shared-buffer",
+          "markdownDescription": "Enables the has_shared_buffer command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the has_shared_buffer command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-has-shared-buffer",
+          "markdownDescription": "Denies the has_shared_buffer command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the list_shared_buffers_windows command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-list-shared-buffers-windows",
+          "markdownDescription": "Enables the list_shared_buffers_windows command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the list_shared_buffers_windows command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-list-shared-buffers-windows",
+          "markdownDescription": "Denies the list_shared_buffers_windows command without any pre-configured scope."
+        },
         {
           "description": "Allows reading data from shared memory buffer",
           "type": "string",
@@ -298,10 +379,94 @@
           "markdownDescription": "Denies uploading files to shared memory buffer"
         },
         {
-          "description": "Default permissions for the Memio plugin (Linux + Android)\n#### This default permission set includes:\n\n- `allow-memio-upload`\n- `allow-memio-read`",
+          "description": "Enables the prepare_upload_buffer command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-prepare-upload-buffer",
+          "markdownDescription": "Enables the prepare_upload_buffer command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the prepare_upload_buffer command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-prepare-upload-buffer",
+          "markdownDescription": "Denies the prepare_upload_buffer command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the request_shared_buffer command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-request-shared-buffer",
+          "markdownDescription": "Enables the request_shared_buffer command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the request_shared_buffer command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-request-shared-buffer",
+          "markdownDescription": "Denies the request_shared_buffer command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the send_download_buffer command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-send-download-buffer",
+          "markdownDescription": "Enables the send_download_buffer command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the send_download_buffer command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-send-download-buffer",
+          "markdownDescription": "Denies the send_download_buffer command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the shared_buffer_write_complete command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-shared-buffer-write-complete",
+          "markdownDescription": "Enables the shared_buffer_write_complete command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the shared_buffer_write_complete command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-shared-buffer-write-complete",
+          "markdownDescription": "Denies the shared_buffer_write_complete command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the write_shared_buffer_windows command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-write-shared-buffer-windows",
+          "markdownDescription": "Enables the write_shared_buffer_windows command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the write_shared_buffer_windows command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-write-shared-buffer-windows",
+          "markdownDescription": "Denies the write_shared_buffer_windows command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the write_shared_buffer_windows_base64 command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-write-shared-buffer-windows-base64",
+          "markdownDescription": "Enables the write_shared_buffer_windows_base64 command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the write_shared_buffer_windows_base64 command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-write-shared-buffer-windows-base64",
+          "markdownDescription": "Denies the write_shared_buffer_windows_base64 command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the write_shared_buffer_windows_bytes command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-write-shared-buffer-windows-bytes",
+          "markdownDescription": "Enables the write_shared_buffer_windows_bytes command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the write_shared_buffer_windows_bytes command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-write-shared-buffer-windows-bytes",
+          "markdownDescription": "Denies the write_shared_buffer_windows_bytes command without any pre-configured scope."
+        },
+        {
+          "description": "Default permissions for the Memio plugin - allows zero-copy SharedBuffer operations\n#### This default permission set includes:\n\n- `allow-memio-upload`\n- `allow-memio-read`\n- `allow-prepare-upload-buffer`\n- `allow-commit-upload-buffer`\n- `allow-send-download-buffer`\n- `allow-create-shared-buffer-windows`\n- `allow-list-shared-buffers-windows`\n- `allow-has-shared-buffer`",
           "type": "string",
           "const": "default",
-          "markdownDescription": "Default permissions for the Memio plugin (Linux + Android)\n#### This default permission set includes:\n\n- `allow-memio-upload`\n- `allow-memio-read`"
+          "markdownDescription": "Default permissions for the Memio plugin - allows zero-copy SharedBuffer operations\n#### This default permission set includes:\n\n- `allow-memio-upload`\n- `allow-memio-read`\n- `allow-prepare-upload-buffer`\n- `allow-commit-upload-buffer`\n- `allow-send-download-buffer`\n- `allow-create-shared-buffer-windows`\n- `allow-list-shared-buffers-windows`\n- `allow-has-shared-buffer`"
         }
       ]
     }

@@ -1,5 +1,11 @@
 fn main() {
     tauri_plugin::Builder::new(&[
+        "prepare_upload_buffer",
+        "commit_upload_buffer",
+        "send_download_buffer",
+        "create_shared_buffer_windows",
+        "list_shared_buffers_windows",
+        "has_shared_buffer",
         "memio_upload",
         "memio_read",
     ])
@@ -13,7 +19,6 @@ fn main() {
         }
     }
 
-}
 }
 
 #[cfg(target_os = "linux")]

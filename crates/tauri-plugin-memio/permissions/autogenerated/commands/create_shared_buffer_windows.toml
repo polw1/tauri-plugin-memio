@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-create-shared-buffer-windows"
+description = "Enables the create_shared_buffer_windows command without any pre-configured scope."
+commands.allow = ["create_shared_buffer_windows"]
+
+[[permission]]
+identifier = "deny-create-shared-buffer-windows"
+description = "Denies the create_shared_buffer_windows command without any pre-configured scope."
+commands.deny = ["create_shared_buffer_windows"]

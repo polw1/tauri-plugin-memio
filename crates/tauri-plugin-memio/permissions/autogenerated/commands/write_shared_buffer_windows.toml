@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-write-shared-buffer-windows"
+description = "Enables the write_shared_buffer_windows command without any pre-configured scope."
+commands.allow = ["write_shared_buffer_windows"]
+
+[[permission]]
+identifier = "deny-write-shared-buffer-windows"
+description = "Denies the write_shared_buffer_windows command without any pre-configured scope."
+commands.deny = ["write_shared_buffer_windows"]

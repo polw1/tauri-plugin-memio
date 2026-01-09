@@ -6,6 +6,10 @@ use tauri::Manager;
 pub mod android;
 #[cfg(target_os = "linux")]
 mod linux;
+#[cfg(target_os = "windows")]
+pub mod windows;
+#[cfg(target_os = "windows")]
+pub mod windows_shared_buffer;
 
 mod commands;
 pub use commands::{memio_upload, memio_read, UploadResult, ReadResult};
@@ -38,6 +42,10 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
                 if let Err(err) = linux::replace_webview_windows_with_extensions(app) {
                     eprintln!("Memio WebKit extension window update failed: {:?}", err);
                 }
+            }
+            #[cfg(target_os = "windows")]
+            {
+                tracing::info!("[MemioWindows] SharedBuffer plugin initialized");
             }
             Ok(())
         })

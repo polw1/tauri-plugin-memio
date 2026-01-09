@@ -7,7 +7,7 @@ description = "Allows reading data from shared memory buffer"
 allow = ["memio_read"]
 deny = []
 [permission.scope]
-allow = [{ linux = ["*"] }, { android = ["*"] }]
+allow = [{ windows = ["*"] }]
 
 [[permission]]
 identifier = "deny-memio-read"

@@ -1,0 +1,17 @@
+"$schema" = "../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-prepare-upload-buffer"
+description = "Enables the prepare_upload_buffer command without any pre-configured scope."
+[permission.commands]
+allow = ["prepare_upload_buffer"]
+deny = []
+[permission.scope]
+allow = [{ windows = ["*"] }]
+
+[[permission]]
+identifier = "deny-prepare-upload-buffer"
+description = "Denies the prepare_upload_buffer command without any pre-configured scope."
+[permission.commands]
+allow = []
+deny = ["prepare_upload_buffer"]
