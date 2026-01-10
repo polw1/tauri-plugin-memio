@@ -11,7 +11,7 @@ export interface SharedStateWriteResult {
   length: number;
 }
 
-export type MemioPlatform = 'linux' | 'android' | 'unknown';
+export type MemioPlatform = 'linux' | 'android' | 'windows' | 'unknown';
 
 export interface SharedStateManifest {
   version: number;
@@ -61,4 +61,12 @@ export interface MemioLinuxGlobals extends MemioGlobalBase {
   __memioSharedBuffers?: Record<string, ArrayBuffer | Uint8Array>;
   __memioSharedPath?: string;
   __memioSharedRegistryPath?: string;
+}
+
+export interface MemioWindowsGlobals extends MemioGlobalBase {
+  /** Windows shared memory buffer access via Tauri IPC */
+  memioWindowsSharedBuffer?: (name?: string) => ArrayBuffer | Uint8Array | null;
+  memioWindowsWriteSharedBuffer?: (name: string, data: Uint8Array) => boolean;
+  __memioWindowsSharedBuffers?: Record<string, ArrayBuffer | Uint8Array>;
+  __memioWindowsReady?: boolean;
 }

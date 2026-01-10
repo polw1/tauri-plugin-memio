@@ -15,7 +15,7 @@ export interface MemioSimpleClient {
   writeSharedNamed(name: string, data: ArrayBuffer | Uint8Array, version?: bigint): SharedStateWriteResult | null;
   sharedBuffer(name: string): Uint8Array | null;
   sharedManifest(): SharedStateManifest | null;
-  /** Returns the detected platform (linux, android, unknown) */
+  /** Returns the detected platform (linux, android, ios, macos, windows, unknown) */
   platform(): MemioPlatform;
   /** Returns true if shared memory is available on this platform */
   hasSharedMemory(): boolean;
