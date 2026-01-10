@@ -53,7 +53,7 @@ const memio = new MemioClient();
 // Wait for buffer to be ready
 await memio.waitForSharedMemory('state');
 
-// Read data (async for Android, sync for Linux)
+// Read data (async for Android, sync for desktop)
 const snapshot = await memio.readSharedStateAsync();
 if (snapshot) {
   console.log('Version:', snapshot.version);
@@ -120,7 +120,7 @@ tauri::Builder::default()
       "urls": ["http://tauri.localhost/*", "https://tauri.localhost/*"]
     },
     "permissions": ["memio:default"],
-    "platforms": ["linux"]
+    "platforms": ["linux", "windows", "macOS"]
   },
   {
     "identifier": "android",
@@ -158,6 +158,7 @@ bootstrap URL (`about:blank`) to access the Memio commands.
 - [Building and Running](docs/Building.md) - Setup and installation
 - [Linux Architecture](docs/Linux.md) - WebKit extension + mmap
 - [Android Architecture](docs/Android.md) - memio:// protocol + JNI
+- [Architecture Overview](docs/Architecture.md) - Technical details
 
 ---
 

@@ -14,7 +14,7 @@
     "permissions": [
       "memio:default"
     ],
-    "platforms": ["linux"]
+    "platforms": ["linux", "windows", "macOS"]
   },
   {
     "identifier": "android",

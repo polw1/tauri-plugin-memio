@@ -56,6 +56,7 @@ pub fn run() {
 
     tauri::Builder::default()
         .setup(|app| {
+            #[cfg(target_os = "linux")]
             memio::plugin::build_webview_windows(app).map_err(|err| {
                 let boxed: Box<dyn std::error::Error> =
                     Box::new(std::io::Error::new(std::io::ErrorKind::Other, err));
@@ -68,6 +69,15 @@ pub fn run() {
                     Box::new(std::io::Error::new(std::io::ErrorKind::Other, err));
                 tauri::Error::Setup(boxed.into())
             })?;
+
+            #[cfg(target_os = "windows")]
+            {
+                build_windows_windows(app).map_err(|err| {
+                    let boxed: Box<dyn std::error::Error> =
+                        Box::new(std::io::Error::new(std::io::ErrorKind::Other, err));
+                    tauri::Error::Setup(boxed.into())
+                })?;
+            }
 
             Ok(())
         })
@@ -87,6 +97,22 @@ pub fn run() {
 
 #[cfg(target_os = "android")]
 fn build_android_windows<R: tauri::Runtime>(app: &tauri::App<R>) -> Result<(), String> {
+    let configs = app.config().app.windows.clone();
+    if !app.webview_windows().is_empty() {
+        return Ok(());
+    }
+
+    for window_config in configs.iter() {
+        let builder = tauri::WebviewWindowBuilder::from_config(app.handle(), window_config)
+            .map_err(|err| err.to_string())?;
+        builder.build().map_err(|err| err.to_string())?;
+    }
+
+    Ok(())
+}
+
+#[cfg(target_os = "windows")]
+fn build_windows_windows<R: tauri::Runtime>(app: &tauri::App<R>) -> Result<(), String> {
     let configs = app.config().app.windows.clone();
     if !app.webview_windows().is_empty() {
         return Ok(());
