@@ -6,20 +6,20 @@ use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::os::windows::ffi::OsStrExt;
 use std::ptr;
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Mutex;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use once_cell::sync::Lazy;
-use windows::core::PCWSTR;
 use windows::Win32::Foundation::{CloseHandle, HANDLE, INVALID_HANDLE_VALUE};
 use windows::Win32::System::Memory::{
-    CreateFileMappingW, MapViewOfFile, OpenFileMappingW, UnmapViewOfFile,
-    FILE_MAP_ALL_ACCESS, PAGE_READWRITE, MEMORY_MAPPED_VIEW_ADDRESS,
+    CreateFileMappingW, FILE_MAP_ALL_ACCESS, MEMORY_MAPPED_VIEW_ADDRESS, MapViewOfFile,
+    OpenFileMappingW, PAGE_READWRITE, UnmapViewOfFile,
 };
+use windows::core::PCWSTR;
 
 use memio_core::{
-    read_header, write_header_unchecked, SharedMemoryError, SharedMemoryFactory,
-    SharedMemoryRegion, SharedStateInfo, SHARED_STATE_HEADER_SIZE, MemioError,
+    MemioError, SHARED_STATE_HEADER_SIZE, SharedMemoryError, SharedMemoryFactory,
+    SharedMemoryRegion, SharedStateInfo, read_header, write_header_unchecked,
 };
 
 const HEADER_SIZE: usize = SHARED_STATE_HEADER_SIZE;
@@ -106,12 +106,15 @@ impl WindowsSharedMemoryRegion {
         let ptr = unsafe { MapViewOfFile(handle, FILE_MAP_ALL_ACCESS, 0, 0, total_size) };
 
         if ptr.Value.is_null() {
-            unsafe { let _ = CloseHandle(handle); }
+            unsafe {
+                let _ = CloseHandle(handle);
+            }
             return Err(MemioError::MmapFailed);
         }
 
         // Initialize header (version=0, length=0)
-        let header_slice = unsafe { std::slice::from_raw_parts_mut(ptr.Value as *mut u8, HEADER_SIZE) };
+        let header_slice =
+            unsafe { std::slice::from_raw_parts_mut(ptr.Value as *mut u8, HEADER_SIZE) };
         write_header_unchecked(header_slice, 0, 0);
 
         // Register with capacity info
@@ -121,8 +124,9 @@ impl WindowsSharedMemoryRegion {
         }
 
         tracing::debug!(
-            "Created Windows shared memory: {} ({} bytes)",
-            mapping_name, total_size
+            "Created Windows memio region: {} ({} bytes)",
+            mapping_name,
+            total_size
         );
 
         Ok(Self {
@@ -142,7 +146,8 @@ impl WindowsSharedMemoryRegion {
         let (mapping_name, capacity) = {
             let registry = REGISTRY.lock().unwrap();
             registry.get(name).cloned()
-        }.ok_or_else(|| MemioError::NotFound(name.to_string()))?;
+        }
+        .ok_or_else(|| MemioError::NotFound(name.to_string()))?;
 
         let total_size = HEADER_SIZE + capacity;
 
@@ -164,7 +169,9 @@ impl WindowsSharedMemoryRegion {
         let ptr = unsafe { MapViewOfFile(handle, FILE_MAP_ALL_ACCESS, 0, 0, total_size) };
 
         if ptr.Value.is_null() {
-            unsafe { let _ = CloseHandle(handle); }
+            unsafe {
+                let _ = CloseHandle(handle);
+            }
             return Err(MemioError::MmapFailed);
         }
 
@@ -183,7 +190,9 @@ impl WindowsSharedMemoryRegion {
 impl Drop for WindowsSharedMemoryRegion {
     fn drop(&mut self) {
         unsafe {
-            let addr = MEMORY_MAPPED_VIEW_ADDRESS { Value: self.ptr as *mut _ };
+            let addr = MEMORY_MAPPED_VIEW_ADDRESS {
+                Value: self.ptr as *mut _,
+            };
             let _ = UnmapViewOfFile(addr);
             let _ = CloseHandle(self.handle);
         }
@@ -206,8 +215,8 @@ impl SharedMemoryRegion for WindowsSharedMemoryRegion {
 
     fn info(&self) -> Result<SharedStateInfo, MemioError> {
         let header_slice = unsafe { std::slice::from_raw_parts(self.ptr, HEADER_SIZE) };
-        let (version, length) = read_header(header_slice, self.capacity)
-            .ok_or(MemioError::InvalidHeader)?;
+        let (version, length) =
+            read_header(header_slice, self.capacity).ok_or(MemioError::InvalidHeader)?;
 
         Ok(SharedStateInfo {
             name: self.name.clone(),
@@ -249,8 +258,8 @@ impl SharedMemoryRegion for WindowsSharedMemoryRegion {
 
     fn read(&self) -> Result<Vec<u8>, MemioError> {
         let header_slice = unsafe { std::slice::from_raw_parts(self.ptr, HEADER_SIZE) };
-        let (_, length) = read_header(header_slice, self.capacity)
-            .ok_or(MemioError::InvalidHeader)?;
+        let (_, length) =
+            read_header(header_slice, self.capacity).ok_or(MemioError::InvalidHeader)?;
 
         let mut data = vec![0u8; length];
         unsafe {
@@ -331,23 +340,25 @@ pub fn list_shared_regions() -> Vec<String> {
 
 /// Creates a new memio region and keeps it alive.
 pub fn create_shared_region(name: &str, capacity: usize) -> Result<(), String> {
-    let region = WindowsSharedMemoryRegion::create(name, capacity)
-        .map_err(|e| e.to_string())?;
-    
+    let region = WindowsSharedMemoryRegion::create(name, capacity).map_err(|e| e.to_string())?;
+
     // Store the handle to keep it alive
     {
         let mut active = ACTIVE_REGIONS.lock().unwrap();
-        active.insert(name.to_string(), RegionHandle {
-            handle: region.handle,
-            ptr: region.ptr,
-            total_size: region.total_size,
-            capacity: region.capacity,
-        });
+        active.insert(
+            name.to_string(),
+            RegionHandle {
+                handle: region.handle,
+                ptr: region.ptr,
+                total_size: region.total_size,
+                capacity: region.capacity,
+            },
+        );
     }
-    
+
     // Prevent Drop from running (which would close the handle)
     std::mem::forget(region);
-    
+
     tracing::info!("Created and stored shared region: {}", name);
     Ok(())
 }
@@ -359,26 +370,25 @@ pub fn read_from_shared(name: &str) -> Result<(u64, Vec<u8>), String> {
     if let Some(handle) = active.get(name) {
         // Read directly from our stored handle
         let header_slice = unsafe { std::slice::from_raw_parts(handle.ptr, HEADER_SIZE) };
-        let (version, length) = read_header(header_slice, handle.capacity)
-            .ok_or("Invalid header")?;
-        
+        let (version, length) =
+            read_header(header_slice, handle.capacity).ok_or("Invalid header")?;
+
         let mut data = vec![0u8; length];
         unsafe {
             let data_ptr = handle.ptr.add(HEADER_SIZE);
             ptr::copy_nonoverlapping(data_ptr, data.as_mut_ptr(), length);
         }
-        
+
         return Ok((version, data));
     }
     drop(active);
-    
+
     // Fallback to opening
-    let region = WindowsSharedMemoryRegion::open(name)
-        .map_err(|e| e.to_string())?;
-    
+    let region = WindowsSharedMemoryRegion::open(name).map_err(|e| e.to_string())?;
+
     let info = region.info().map_err(|e| e.to_string())?;
     let data = region.read().map_err(|e| e.to_string())?;
-    
+
     Ok((info.version, data))
 }
 
@@ -388,27 +398,30 @@ pub fn write_to_shared(name: &str, version: u64, data: &[u8]) -> Result<(), Stri
     let active = ACTIVE_REGIONS.lock().unwrap();
     if let Some(handle) = active.get(name) {
         if data.len() > handle.capacity {
-            return Err(format!("Data too large: {} > {}", data.len(), handle.capacity));
+            return Err(format!(
+                "Data too large: {} > {}",
+                data.len(),
+                handle.capacity
+            ));
         }
-        
+
         // Write data after header
         unsafe {
             let data_ptr = handle.ptr.add(HEADER_SIZE);
             ptr::copy_nonoverlapping(data.as_ptr(), data_ptr, data.len());
         }
-        
+
         // Write header
         let header_slice = unsafe { std::slice::from_raw_parts_mut(handle.ptr, HEADER_SIZE) };
         write_header_unchecked(header_slice, version, data.len());
-        
+
         return Ok(());
     }
     drop(active);
-    
+
     // Fallback to opening
-    let mut region = WindowsSharedMemoryRegion::open(name)
-        .map_err(|e| e.to_string())?;
-    
+    let mut region = WindowsSharedMemoryRegion::open(name).map_err(|e| e.to_string())?;
+
     region.write(version, data).map_err(|e| e.to_string())?;
     Ok(())
 }
@@ -419,16 +432,14 @@ pub fn get_version(name: &str) -> Result<u64, String> {
     let active = ACTIVE_REGIONS.lock().unwrap();
     if let Some(handle) = active.get(name) {
         let header_slice = unsafe { std::slice::from_raw_parts(handle.ptr, HEADER_SIZE) };
-        let (version, _) = read_header(header_slice, handle.capacity)
-            .ok_or("Invalid header")?;
+        let (version, _) = read_header(header_slice, handle.capacity).ok_or("Invalid header")?;
         return Ok(version);
     }
     drop(active);
-    
+
     // Fallback to opening
-    let region = WindowsSharedMemoryRegion::open(name)
-        .map_err(|e| e.to_string())?;
-    
+    let region = WindowsSharedMemoryRegion::open(name).map_err(|e| e.to_string())?;
+
     let info = region.info().map_err(|e| e.to_string())?;
     Ok(info.version)
 }
@@ -460,12 +471,12 @@ pub fn get_shared_size(name: &str) -> Result<usize, String> {
         return Ok(handle.capacity);
     }
     drop(active);
-    
+
     // Try from registry - stores (mapping_name, capacity)
     let registry = REGISTRY.lock().unwrap();
     if let Some((_mapping_name, capacity)) = registry.get(name) {
         return Ok(*capacity);
     }
-    
+
     Err(format!("Region '{}' not found", name))
 }

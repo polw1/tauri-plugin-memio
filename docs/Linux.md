@@ -8,7 +8,7 @@ The Linux implementation uses:
 - **READ (Back→Front)**: WebKit Extension with direct mmap to `/dev/shm`
 - **WRITE (Front→Back)**: WebKit Extension with mmap and direct writes
 
-Unlike Android, Linux **does not use an HTTP protocol** - the WebKit extension accesses shared memory files directly.
+Unlike Android, Linux **does not use an HTTP protocol** - the WebKit extension accesses memio region files directly.
 
 ---
 
@@ -371,3 +371,13 @@ Offset  Size   Field      Description
 ```
 
 **Note**: The Linux header is 24 bytes (with magic), unlike Android which uses 16 bytes (length + version only).
+
+---
+
+## References
+
+- [WebKitGTK Web Extensions](https://webkitgtk.org/reference/webkit2gtk/stable/WebKitWebExtension.html) - Official documentation for WebKit web extensions.
+- [/dev/shm and POSIX Shared Memory](https://man7.org/linux/man-pages/man7/shm_overview.7.html) - Linux POSIX shared memory overview.
+- [mmap(2) - Linux Manual](https://man7.org/linux/man-pages/man2/mmap.2.html) - Memory-mapped file I/O.
+- [memmap2 Crate](https://crates.io/crates/memmap2) - Rust crate for memory-mapped file I/O.
+- [JavaScriptCore GLib API](https://webkitgtk.org/reference/jsc-glib/stable/) - JavaScriptCore bindings used in WebKit extensions.

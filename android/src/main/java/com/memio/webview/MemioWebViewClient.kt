@@ -10,35 +10,30 @@ import java.io.ByteArrayInputStream
 import java.nio.ByteOrder
 
 /**
- * Custom WebViewClient that intercepts memio:// protocol for zero-copy buffer access.
+ * Custom WebViewClient that intercepts memio:// protocol for direct buffer access.
  * 
  * ## Architecture: C++ Data Plane + JS Controller
  * 
  * This approach eliminates Base64 encoding/decoding overhead by using a custom URL scheme:
  * 
  * ```
- * JavaScript                  Kotlin                    Rust/Shared Memory
+ * JavaScript                  Kotlin                    Rust/Memio region
  *    |                          |                              |
- *    |-- invoke("prepare") ---->|                              |
- *    |                          |--- write to shared mem ----->|
+ *    |-- invoke("upload_file_from_uri") --->|                   |
+ *    |                          |--- write to memio region ---->|
  *    |<-------- OK -------------|                              |
  *    |                          |                              |
  *    |-- fetch("memio://...") ->|                              |
  *    |                          |<-- read DirectByteBuffer ----|
- *    |<-- raw bytes (NO BASE64)-|                              |
+ *    |<-- raw bytes (no Base64)-|                              |
  * ```
- * 
- * ## Performance:
- * - Base64 approach: ~740ms for 5MB (encode + decode overhead)
- * - memio:// protocol: ~20-50ms for 5MB (zero Base64, one copy for InputStream)
- * - **15-35x faster!**
  * 
  * ## Usage:
  * ```javascript
- * // JS sends small command
- * await invoke("write_file_to_shared", { buffer: "file_transfer", ... });
- * 
- * // JS fetches via custom protocol (NO BASE64!)
+ * // JS triggers a native upload via URI
+ * await invoke("upload_file_from_uri", { bufferName: "file_transfer", fileUri });
+ *
+ * // JS fetches via custom protocol (no Base64)
  * const response = await fetch("memio://buffer/file_transfer");
  * const arrayBuffer = await response.arrayBuffer();
  * ```
@@ -58,8 +53,8 @@ class MemioWebViewClient(
     }
     
     /**
-     * Intercepts memio:// URLs and serves data from shared memory.
-     * Also handles POST requests to write data to shared memory.
+     * Intercepts memio:// URLs and serves data from the memio region.
+     * Also handles POST requests to write data to the memio region.
      * Falls back to wrapped client for other URLs.
      */
     override fun shouldInterceptRequest(
@@ -94,7 +89,7 @@ class MemioWebViewClient(
     }
     
     /**
-     * Handles POST request to write data to shared memory.
+     * Handles POST request to write data to the memio region.
      * Since WebResourceRequest doesn't provide POST body access in Android,
      * we use a different approach: data is passed via custom X-Memio-Data header.
      */
@@ -117,7 +112,7 @@ class MemioWebViewClient(
             
             if (!success) {
                 Log.e(TAG, "Failed to write to buffer '$name'")
-                return createErrorResponse(500, "Failed to write to shared memory")
+                return createErrorResponse(500, "Failed to write to memio region")
             }
             
             Log.d(TAG, "Successfully wrote ${data.length} bytes to buffer '$name' (version=$version)")
@@ -148,8 +143,8 @@ class MemioWebViewClient(
     }
     
     /**
-     * Serves a shared memory buffer via WebResourceResponse.
-     * This reads from DirectByteBuffer (zero-copy from Rust) and returns raw bytes.
+     * Serves a memio buffer via WebResourceResponse.
+     * This reads from DirectByteBuffer and returns raw bytes.
      */
     private fun serveMemioBuffer(name: String): WebResourceResponse {
         try {
@@ -179,7 +174,7 @@ class MemioWebViewClient(
             val data = ByteArray(length)
             buffer.get(data)
             
-            // Create response with raw bytes (NO BASE64!)
+            // Create response with raw bytes (no Base64)
             val inputStream = ByteArrayInputStream(data)
             val headers = mapOf(
                 "Content-Type" to "application/octet-stream",

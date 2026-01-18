@@ -71,7 +71,7 @@ impl MemioError {
     pub fn lock_poisoned(msg: impl Into<String>) -> Self {
         MemioError::LockPoisoned(msg.into())
     }
-    
+
     pub fn lock_failed() -> Self {
         MemioError::Io("Failed to acquire lock".into())
     }

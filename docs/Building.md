@@ -79,9 +79,9 @@ npm run tauri dev
 └─────────────────────────────────────────────────────────────┘
 ```
 
-**Performance:**
-- READ: ~1-2ms (zero-copy via mmap)
-- WRITE: ~1ms (direct mmap write)
+**Notes:**
+- READ: mmap-backed access
+- WRITE: mmap-backed writes
 - Polling: WebKit extension timer (100ms)
 
 ### WebKit Extension
@@ -181,7 +181,7 @@ The Tauri plugin automatically registers these components:
 | `MemioWebViewClient.kt` | Intercepts `memio://` URLs |
 | `MemioWebChromeClient.kt` | Captures file picker URIs |
 | `MemioJsBridge.kt` | JavaScript interface for version polling |
-| `MemioSharedMemory.kt` | JNI wrapper for shared memory |
+| `MemioSharedMemory.kt` | JNI wrapper for memio regions |
 
 ---
 
@@ -273,7 +273,7 @@ npm run tauri android build
 
 ## Troubleshooting
 
-### Linux: "Shared memory not available"
+### Linux: "Memio region not available"
 
 **Symptom:** `memioSharedBuffer('state')` returns null
 

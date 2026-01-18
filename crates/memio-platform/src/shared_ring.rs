@@ -33,7 +33,9 @@ impl SharedRingBuffer {
     /// Creates a new ring buffer with the given capacity.
     pub fn create(capacity: usize) -> MemioResult<Self> {
         if capacity == 0 {
-            return Err(MemioError::Internal("Ring capacity must be > 0".to_string()));
+            return Err(MemioError::Internal(
+                "Ring capacity must be > 0".to_string(),
+            ));
         }
 
         let mut path = PathBuf::from("/dev/shm");
@@ -174,7 +176,9 @@ impl SharedRingBuffer {
         } else {
             let header = unsafe { &*header_ptr };
             if header.magic != RING_MAGIC {
-                return Err(MemioError::Internal("Invalid ring buffer magic.".to_string()));
+                return Err(MemioError::Internal(
+                    "Invalid ring buffer magic.".to_string(),
+                ));
             }
         }
 

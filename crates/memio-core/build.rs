@@ -40,9 +40,7 @@ fn main() {
     };
 
     // Extract values from JSON
-    let magic_hex = spec["magic_hex"]
-        .as_str()
-        .unwrap_or("0x545552424F534852");
+    let magic_hex = spec["magic_hex"].as_str().unwrap_or("0x545552424F534852");
     let header_size = spec["header_size"].as_u64().unwrap_or(64);
     let magic_offset = spec["offsets"]["magic"].as_u64().unwrap_or(0);
     let version_offset = spec["offsets"]["version"].as_u64().unwrap_or(8);

@@ -49,26 +49,28 @@ pub fn create_shared_buffer(
 ) -> windows::core::Result<(*mut u8, u64)> {
     unsafe {
         let buffer = environment.CreateSharedBuffer(size)?;
-        
+
         // Get the buffer pointer
         let mut buffer_ptr: *mut u8 = std::ptr::null_mut();
         buffer.Buffer(&mut buffer_ptr)?;
-        
+
         tracing::info!(
             "[MemioSharedBuffer] Created buffer '{}': {} bytes at {:?}",
-            name, size, buffer_ptr
+            name,
+            size,
+            buffer_ptr
         );
-        
+
         // Register in our map
         let entry = SharedBufferEntry {
             buffer,
             ptr: buffer_ptr,
             size,
         };
-        
+
         let mut registry = get_registry().lock().unwrap();
         registry.insert(name.to_string(), entry);
-        
+
         Ok((buffer_ptr, size))
     }
 }
@@ -81,55 +83,56 @@ pub fn post_buffer_to_script(
     additional_data_json: Option<&str>,
 ) -> windows::core::Result<()> {
     let registry = get_registry().lock().unwrap();
-    
+
     let entry = registry.get(name).ok_or_else(|| {
         windows::core::Error::new::<&str>(
             windows::core::HRESULT(-1),
             &format!("Buffer '{}' not found", name),
         )
     })?;
-    
+
     unsafe {
         // Cast to ICoreWebView2_17 to access PostSharedBufferToScript
         let webview17: ICoreWebView2_17 = webview.cast()?;
-        
+
         let json_pcwstr = if let Some(json) = additional_data_json {
             let wide: Vec<u16> = json.encode_utf16().chain(std::iter::once(0)).collect();
             PCWSTR::from_raw(wide.as_ptr())
         } else {
             PCWSTR::null()
         };
-        
+
         webview17.PostSharedBufferToScript(
             &entry.buffer,
             COREWEBVIEW2_SHARED_BUFFER_ACCESS_READ_WRITE,
             json_pcwstr,
         )?;
-        
+
         tracing::info!(
             "[MemioSharedBuffer] Posted buffer '{}' to script ({} bytes)",
-            name, entry.size
+            name,
+            entry.size
         );
     }
-    
+
     Ok(())
 }
 
 /// Read data from a SharedBuffer (after JS has written to it).
 pub fn read_from_buffer(name: &str, offset: usize, length: usize) -> Result<Vec<u8>, String> {
     let registry = get_registry().lock().unwrap();
-    
-    let entry = registry.get(name).ok_or_else(|| {
-        format!("Buffer '{}' not found", name)
-    })?;
-    
+
+    let entry = registry
+        .get(name)
+        .ok_or_else(|| format!("Buffer '{}' not found", name))?;
+
     if offset + length > entry.size as usize {
         return Err(format!(
             "Read out of bounds: offset {} + length {} > size {}",
             offset, length, entry.size
         ));
     }
-    
+
     unsafe {
         let src = entry.ptr.add(offset);
         let mut data = vec![0u8; length];
@@ -141,41 +144,43 @@ pub fn read_from_buffer(name: &str, offset: usize, length: usize) -> Result<Vec<
 /// Write data to a SharedBuffer (before sending to JS).
 pub fn write_to_buffer(name: &str, offset: usize, data: &[u8]) -> Result<(), String> {
     let registry = get_registry().lock().unwrap();
-    
-    let entry = registry.get(name).ok_or_else(|| {
-        format!("Buffer '{}' not found", name)
-    })?;
-    
+
+    let entry = registry
+        .get(name)
+        .ok_or_else(|| format!("Buffer '{}' not found", name))?;
+
     if offset + data.len() > entry.size as usize {
         return Err(format!(
             "Write out of bounds: offset {} + length {} > size {}",
-            offset, data.len(), entry.size
+            offset,
+            data.len(),
+            entry.size
         ));
     }
-    
+
     unsafe {
         let dst = entry.ptr.add(offset);
         std::ptr::copy_nonoverlapping(data.as_ptr(), dst, data.len());
     }
-    
+
     Ok(())
 }
 
 /// Get the raw pointer to a buffer for direct access.
 pub fn get_buffer_ptr(name: &str) -> Result<(*mut u8, u64), String> {
     let registry = get_registry().lock().unwrap();
-    
-    let entry = registry.get(name).ok_or_else(|| {
-        format!("Buffer '{}' not found", name)
-    })?;
-    
+
+    let entry = registry
+        .get(name)
+        .ok_or_else(|| format!("Buffer '{}' not found", name))?;
+
     Ok((entry.ptr, entry.size))
 }
 
 /// Close and remove a SharedBuffer.
 pub fn close_buffer(name: &str) -> Result<(), String> {
     let mut registry = get_registry().lock().unwrap();
-    
+
     if let Some(entry) = registry.remove(name) {
         unsafe {
             let _ = entry.buffer.Close();

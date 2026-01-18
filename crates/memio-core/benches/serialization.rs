@@ -1,8 +1,8 @@
 //! Benchmark for serialization.
 
-use criterion::{criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, criterion_group, criterion_main};
 use memio_core::MemioState;
-use rkyv::{Archive, Serialize, Deserialize};
+use rkyv::{Archive, Deserialize, Serialize};
 
 #[derive(Archive, Serialize, Deserialize)]
 struct TestData {

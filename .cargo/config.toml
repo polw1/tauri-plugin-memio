@@ -1,0 +1,22 @@
+# Cargo configuration for tauri-plugin-memio
+
+[alias]
+# Shortcuts for common tasks
+xtask = "run --package xtask --"
+lint = "clippy --workspace --all-targets --all-features"
+fmt-check = "fmt --all -- --check"
+
+[build]
+# Use all available CPU cores
+jobs = -1
+
+[profile.dev]
+# Optimize dependencies even in debug mode for faster iteration
+opt-level = 1
+
+[profile.release]
+# Maximum optimization for release builds
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+strip = true

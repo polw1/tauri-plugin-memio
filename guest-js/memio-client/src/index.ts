@@ -62,7 +62,7 @@ export {
 export type { SharedStateManifest, SharedStateSnapshot, SharedStateWriteResult, MemioPlatform, MemioConfig };
 
 // =============================================================================
-// UNIFIED API - Use these for the simplest cross-platform experience
+// UNIFIED API - Use these for cross-platform experience
 // =============================================================================
 export { memioRead, memioWrite, memioUpload, memioUploadFile } from './unified';
 export type { MemioReadResult, MemioWriteResult } from './unified';

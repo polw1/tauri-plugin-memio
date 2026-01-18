@@ -1,12 +1,12 @@
 //! Thread-safe state container with serialization.
 
+use rkyv::{Archive, Serialize};
 use std::sync::RwLock;
 use std::sync::atomic::{AtomicU64, Ordering};
-use rkyv::{Archive, Serialize};
 
-use crate::error::{MemioError, MemioResult};
-use crate::schema::{schema_json, MemioSchema};
 use crate::SharedMemoryRegion;
+use crate::error::{MemioError, MemioResult};
+use crate::schema::{MemioSchema, schema_json};
 
 /// State container with optional memio region binding.
 pub struct MemioState<T, R: SharedMemoryRegion = NoOpRegion> {
@@ -21,22 +21,28 @@ pub struct MemioState<T, R: SharedMemoryRegion = NoOpRegion> {
 pub struct NoOpRegion;
 
 impl SharedMemoryRegion for NoOpRegion {
-    fn capacity(&self) -> usize { 0 }
-    
+    fn capacity(&self) -> usize {
+        0
+    }
+
     fn info(&self) -> Result<crate::SharedStateInfo, MemioError> {
         Ok(crate::SharedStateInfo::default())
     }
-    
+
     fn write(&mut self, _version: u64, _data: &[u8]) -> Result<crate::SharedStateInfo, MemioError> {
         Ok(crate::SharedStateInfo::default())
     }
-    
+
     fn read(&self) -> Result<Vec<u8>, MemioError> {
         Ok(Vec::new())
     }
-    
-    unsafe fn data_ptr(&self) -> *const u8 { std::ptr::null() }
-    unsafe fn data_ptr_mut(&mut self) -> *mut u8 { std::ptr::null_mut() }
+
+    unsafe fn data_ptr(&self) -> *const u8 {
+        std::ptr::null()
+    }
+    unsafe fn data_ptr_mut(&mut self) -> *mut u8 {
+        std::ptr::null_mut()
+    }
 }
 
 impl<T> MemioState<T, NoOpRegion>
@@ -102,12 +108,11 @@ where
     pub fn to_bytes_cached(&self) -> MemioResult<(u64, Vec<u8>)> {
         let current_version = self.version();
 
-        if let Ok(cache_guard) = self.cache.read() {
-            if let Some((cached_version, cached_bytes)) = cache_guard.as_ref() {
-                if *cached_version == current_version {
-                    return Ok((current_version, cached_bytes.clone()));
-                }
-            }
+        if let Ok(cache_guard) = self.cache.read()
+            && let Some((cached_version, cached_bytes)) = cache_guard.as_ref()
+            && *cached_version == current_version
+        {
+            return Ok((current_version, cached_bytes.clone()));
         }
 
         let bytes = self.to_bytes()?;
@@ -122,7 +127,7 @@ where
     pub fn serialize_into(&self, arena: &crate::arena::Arena) -> MemioResult<(*const u8, usize)> {
         let bytes = self.to_bytes()?;
         let len = bytes.len();
-        
+
         let ptr = arena.alloc(len, 8).ok_or(MemioError::ArenaFull {
             requested: len,
             available: arena.capacity() - arena.used(),
@@ -195,7 +200,8 @@ where
 
 impl<T, R> Default for MemioState<T, R>
 where
-    T: Default + Archive
+    T: Default
+        + Archive
         + for<'a> Serialize<
             rkyv::api::high::HighSerializer<
                 rkyv::util::AlignedVec,

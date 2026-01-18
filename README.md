@@ -1,6 +1,13 @@
 # MemioTauri
 
-**High-performance shared memory for Tauri apps.** Zero-copy data transfer between Rust and JavaScript.
+**High-performance data bridge for Tauri apps.** Data transfer between Rust and JavaScript.
+
+---
+
+## What is a memio region?
+
+A memio region is the shared data area that Memio creates between the Rust backend and the WebView frontend.  
+The implementation varies by platform (for example, `/dev/shm` on Linux, `ASharedMemory` on Android, or a Windows file mapping / SharedBuffer), but the API stays the same.
 
 ---
 
@@ -35,7 +42,7 @@ memio = { path = "path/to/memioTauri/crates/memio" }
 ```rust
 use memio::prelude::*;
 
-// Create shared buffer
+// Create memio buffer
 let manager = MemioManager::new()?;
 manager.create_buffer("state", 1024 * 1024)?; // 1MB
 
@@ -71,7 +78,7 @@ import { MemioClient } from 'memio-client';
 
 const memio = new MemioClient();
 
-// Write data to shared memory
+// Write data to memio region
 const data = new TextEncoder().encode('Hello from JS!');
 memio.writeSharedState(data);
 ```

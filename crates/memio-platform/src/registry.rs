@@ -6,9 +6,7 @@ use std::collections::HashMap;
 use std::fmt::Debug;
 use std::path::{Path, PathBuf};
 
-use memio_core::{
-    SharedMemoryFactory, SharedMemoryRegion, SharedMemoryError, MemioResult,
-};
+use memio_core::{MemioResult, SharedMemoryError, SharedMemoryFactory, SharedMemoryRegion};
 
 /// Entry in the registry containing both path and region.
 struct RegistryEntry<R> {
@@ -48,7 +46,11 @@ impl<F: SharedMemoryFactory> SharedRegistry<F> {
     }
 
     /// Registers an existing path under a name (without a region).
-    pub fn register(&mut self, _name: impl Into<String>, _path: impl AsRef<Path>) -> MemioResult<()> {
+    pub fn register(
+        &mut self,
+        _name: impl Into<String>,
+        _path: impl AsRef<Path>,
+    ) -> MemioResult<()> {
         // Note: This method is kept for API compatibility but doesn't store regions.
         // Use create_buffer for full functionality.
         self.write_manifest()
@@ -67,7 +69,7 @@ impl<F: SharedMemoryFactory> SharedRegistry<F> {
         } else {
             PathBuf::new()
         };
-        
+
         self.entries.insert(name, RegistryEntry { path, region });
         let _ = self.write_manifest();
         Ok(())
@@ -135,10 +137,13 @@ impl<F: SharedMemoryFactory> Drop for SharedRegistry<F> {
     fn drop(&mut self) {
         // Clean up manifest file when registry is dropped
         // Note: Individual regions will clean themselves up via their own Drop impl
-        if self.manifest_path.exists() {
-            if let Err(e) = std::fs::remove_file(&self.manifest_path) {
-                eprintln!("Warning: Failed to remove manifest file {:?}: {}", self.manifest_path, e);
-            }
+        if self.manifest_path.exists()
+            && let Err(e) = std::fs::remove_file(&self.manifest_path)
+        {
+            eprintln!(
+                "Warning: Failed to remove manifest file {:?}: {}",
+                self.manifest_path, e
+            );
         }
     }
 }

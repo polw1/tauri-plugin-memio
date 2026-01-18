@@ -18,7 +18,6 @@ fn main() {
             eprintln!("cargo:warning=Memio WebKit extension build failed: {err}");
         }
     }
-
 }
 
 #[cfg(target_os = "linux")]
@@ -26,7 +25,8 @@ fn build_webkit_extension() -> Result<(), String> {
     use std::path::PathBuf;
     use std::process::Command;
 
-    let manifest_dir = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").map_err(|e| e.to_string())?);
+    let manifest_dir =
+        PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").map_err(|e| e.to_string())?);
     let extension_dir = manifest_dir.join("extensions").join("webkit-linux");
     let meson_file = extension_dir.join("meson.build");
     if !meson_file.exists() {

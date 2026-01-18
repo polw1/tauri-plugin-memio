@@ -5,7 +5,7 @@ This document describes the communication architecture between the Rust backend 
 ## Overview
 
 The Android implementation removes traditional Base64 serialization using:
-- **READ (Back→Front)**: `memio://` protocol with direct shared memory access
+- **READ (Back→Front)**: `memio://` protocol with direct memio region access
 - **WRITE (Front→Back)**: Native ContentResolver via the Tauri command
 
 ---
@@ -30,7 +30,7 @@ The Android implementation removes traditional Base64 serialization using:
 │  │  │ version+  │                      │   │                                │
 │  │  │ length    │                      │   │                                │
 │  │  └───────────┴──────────────────────┘   │                                │
-│  │         ▲ mmap (zero-copy)              │                                │
+│  │         ▲ mmap (direct)                 │                                │
 │  └─────────┼───────────────────────────────┘                                │
 │            │                                                                │
 └────────────┼────────────────────────────────────────────────────────────────┘
@@ -43,7 +43,7 @@ The Android implementation removes traditional Base64 serialization using:
 │                                                                             │
 │  MemioSharedMemory.getDirectBuffer(name)                                    │
 │         │                                                                   │
-│         │ Returns DirectByteBuffer (zero-copy view of mmap)                 │
+│         │ Returns DirectByteBuffer (direct view of mmap)                    │
 │         ▼                                                                   │
 │  MemioWebViewClient.shouldInterceptRequest()                                │
 │         │                                                                   │
@@ -173,7 +173,7 @@ The Android implementation removes traditional Base64 serialization using:
 │      val bytes = inputStream?.readBytes()                                   │
 │          ?: return invoke.reject("Failed to read")                          │
 │                                                                             │
-│      // Write directly to shared memory                                     │
+│      // Write directly to memio region                                      │
 │      val version = System.currentTimeMillis()                               │
 │      val success = MemioSharedMemory.write(                                 │
 │          args.bufferName,                                                   │
@@ -250,7 +250,7 @@ The Android implementation removes traditional Base64 serialization using:
 | `MemioWebViewClient.kt` | Intercepts `memio://` and serves data via HTTP |
 | `MemioWebChromeClient.kt` | Captures file picker URIs |
 | `MemioJsBridge.kt` | JS interface for version polling |
-| `MemioSharedMemory.kt` | JNI wrapper for shared memory |
+| `MemioSharedMemory.kt` | JNI wrapper for memio regions |
 | `MemioSpec.kt` | Constants (header size, etc) |
 
 ### Rust
@@ -339,3 +339,13 @@ Offset  Size   Field      Description
 ```
 
 **Note**: In Kotlin we read the header in the reverse order (offset 8 = version, offset 0 = length) because Rust writes `[length:8][version:8]`.
+
+---
+
+## References
+
+- [ASharedMemory NDK Documentation](https://developer.android.com/ndk/reference/group/memory) - Official NDK reference for ASharedMemory functions.
+- [WebViewClient.shouldInterceptRequest](https://developer.android.com/reference/android/webkit/WebViewClient#shouldInterceptRequest(android.webkit.WebView,%20android.webkit.WebResourceRequest)) - Intercept resource requests in WebView.
+- [JNI Tips - Android Developers](https://developer.android.com/training/articles/perf-jni) - Best practices for JNI on Android.
+- [jni-rs Crate](https://crates.io/crates/jni) - Rust bindings for JNI.
+- [Tauri Android Plugin Guide](https://v2.tauri.app/develop/plugins/develop-mobile/) - Developing plugins for Android.

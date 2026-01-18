@@ -14,7 +14,7 @@ import com.memio.webview.MemioWebChromeClient
 import com.memio.webview.MemioWebViewClient
 
 /**
- * MemioPlugin - zero-copy shared memory bridge for Android WebView.
+ * MemioPlugin - memio data bridge for Android WebView.
  *
  * Components used:
  * 1. JavaScriptInterface (MemioJsBridge) for commands/metadata
@@ -59,15 +59,15 @@ class MemioPlugin(private val activity: Activity) : Plugin(activity) {
     }
     
     /**
-     * Upload file from content:// URI to shared memory (ZERO BASE64!)
-     * 
-     * This is the optimal approach for Android uploads:
+     * Upload file from content:// URI to memio region (no Base64).
+     *
+     * This is the preferred approach for Android uploads:
      * 1. JS sends only URI string (captured by MemioWebChromeClient)
      * 2. Kotlin reads file via ContentResolver
-     * 3. Writes directly to shared memory
-     * 
-     * No Base64 encoding, no JavaScript file reads, true zero-copy!
-     * 
+     * 3. Writes directly to the memio region
+     *
+     * No Base64 encoding and no JavaScript file reads.
+     *
      */
     @Command
     fun uploadFileFromUri(invoke: Invoke) {
@@ -134,13 +134,13 @@ class MemioPlugin(private val activity: Activity) : Plugin(activity) {
             // Auto-increment version
             val version = System.currentTimeMillis()
             
-            // Write directly to shared memory (NO BASE64!)
+            // Write directly to memio region (no Base64)
             val writeStartTime = System.currentTimeMillis()
             val success = MemioSharedMemory.write(bufferName, version, data)
             val writeTime = System.currentTimeMillis() - writeStartTime
             
             if (!success) {
-                invoke.reject("Failed to write to shared memory")
+                invoke.reject("Failed to write to memio region")
                 return
             }
             

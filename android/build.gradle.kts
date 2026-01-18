@@ -8,7 +8,7 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        // minSdk 26 required for ASharedMemory (zero-copy shared memory on native side)
+        // minSdk 26 required for ASharedMemory on the native side
         minSdk = 26
         consumerProguardFiles("consumer-rules.pro")
     }

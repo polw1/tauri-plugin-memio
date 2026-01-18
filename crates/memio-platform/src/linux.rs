@@ -5,15 +5,15 @@
 use std::collections::HashMap;
 use std::fs::{self, OpenOptions};
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Mutex;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use memmap2::MmapMut;
 use once_cell::sync::Lazy;
 
 use memio_core::{
-    SharedMemoryError, SharedMemoryFactory, SharedMemoryRegion, SharedStateInfo,
-    SHARED_STATE_HEADER_SIZE, read_header, write_header_unchecked, validate_magic,
+    SHARED_STATE_HEADER_SIZE, SharedMemoryError, SharedMemoryFactory, SharedMemoryRegion,
+    SharedStateInfo, read_header, validate_magic, write_header_unchecked,
 };
 
 const HEADER_SIZE: usize = SHARED_STATE_HEADER_SIZE;
@@ -41,7 +41,7 @@ static REGISTRY: Lazy<Mutex<HashMap<String, PathBuf>>> = Lazy::new(|| Mutex::new
 /// ```
 pub fn cleanup_orphaned_files() {
     let shm_path = Path::new(SHM_BASE_PATH);
-    
+
     if let Ok(entries) = fs::read_dir(shm_path) {
         for entry in entries.flatten() {
             let path = entry.path();
@@ -50,7 +50,7 @@ pub fn cleanup_orphaned_files() {
                 if !filename.starts_with(FILE_PREFIX) {
                     continue;
                 }
-                
+
                 // Extract PID from filename (format: memio_<name>_<pid>_<nonce>_<seq>.bin)
                 // or memio_shared_registry_<pid>.txt
                 if let Some(pid) = extract_pid_from_filename(filename) {
@@ -59,7 +59,7 @@ pub fn cleanup_orphaned_files() {
                         if let Err(e) = fs::remove_file(&path) {
                             eprintln!("Warning: Failed to remove orphaned file {:?}: {}", path, e);
                         } else {
-                            eprintln!("Cleaned up orphaned shared memory file: {:?}", path);
+                            eprintln!("Cleaned up orphaned memio file: {:?}", path);
                         }
                     }
                 }
@@ -72,10 +72,12 @@ pub fn cleanup_orphaned_files() {
 fn extract_pid_from_filename(filename: &str) -> Option<u32> {
     // Handle registry files: memio_shared_registry_<pid>.txt
     if filename.starts_with("memio_shared_registry_") && filename.ends_with(".txt") {
-        let middle = filename.strip_prefix("memio_shared_registry_")?.strip_suffix(".txt")?;
+        let middle = filename
+            .strip_prefix("memio_shared_registry_")?
+            .strip_suffix(".txt")?;
         return middle.parse().ok();
     }
-    
+
     // Handle data files: memio_<name>_<pid>_<nonce>_<seq>.bin
     if filename.ends_with(".bin") {
         let parts: Vec<&str> = filename.split('_').collect();
@@ -86,7 +88,7 @@ fn extract_pid_from_filename(filename: &str) -> Option<u32> {
             return parts[pid_idx].parse().ok();
         }
     }
-    
+
     None
 }
 
@@ -120,10 +122,13 @@ impl LinuxSharedMemoryRegion {
 impl Drop for LinuxSharedMemoryRegion {
     fn drop(&mut self) {
         // Clean up the memio file when the region is dropped
-        if self.path.exists() {
-            if let Err(e) = std::fs::remove_file(&self.path) {
-                eprintln!("Warning: Failed to remove shared memory file {:?}: {}", self.path, e);
-            }
+        if self.path.exists()
+            && let Err(e) = std::fs::remove_file(&self.path)
+        {
+            eprintln!(
+                "Warning: Failed to remove memio file {:?}: {}",
+                self.path, e
+            );
         }
         // Remove from registry
         if let Ok(mut registry) = REGISTRY.lock() {
@@ -138,8 +143,8 @@ impl SharedMemoryRegion for LinuxSharedMemoryRegion {
     }
 
     fn info(&self) -> Result<SharedStateInfo, SharedMemoryError> {
-        let (version, length) = read_header(&self.mmap, self.capacity)
-            .ok_or(SharedMemoryError::InvalidHeader)?;
+        let (version, length) =
+            read_header(&self.mmap, self.capacity).ok_or(SharedMemoryError::InvalidHeader)?;
 
         Ok(SharedStateInfo {
             name: self.name.clone(),
@@ -182,8 +187,8 @@ impl SharedMemoryRegion for LinuxSharedMemoryRegion {
     }
 
     fn read(&self) -> Result<Vec<u8>, SharedMemoryError> {
-        let (_, length) = read_header(&self.mmap, self.capacity)
-            .ok_or(SharedMemoryError::InvalidHeader)?;
+        let (_, length) =
+            read_header(&self.mmap, self.capacity).ok_or(SharedMemoryError::InvalidHeader)?;
 
         let data_offset = HEADER_SIZE;
         let mut data = vec![0u8; length];
@@ -262,9 +267,8 @@ impl LinuxSharedMemoryFactory {
                 .map_err(|e| SharedMemoryError::CreateFailed(e.to_string()))?;
         }
 
-        let mut mmap = unsafe {
-            MmapMut::map_mut(&file).map_err(|_| SharedMemoryError::MmapFailed)?
-        };
+        let mut mmap =
+            unsafe { MmapMut::map_mut(&file).map_err(|_| SharedMemoryError::MmapFailed)? };
 
         if create {
             // Initialize header with version 0 and length 0
@@ -319,8 +323,8 @@ impl SharedMemoryFactory for LinuxSharedMemoryFactory {
         let path = path.ok_or_else(|| SharedMemoryError::NotFound(name.to_string()))?;
 
         // Get file size to determine capacity
-        let metadata = fs::metadata(&path)
-            .map_err(|e| SharedMemoryError::OpenFailed(e.to_string()))?;
+        let metadata =
+            fs::metadata(&path).map_err(|e| SharedMemoryError::OpenFailed(e.to_string()))?;
         let file_len = metadata.len() as usize;
 
         if file_len < HEADER_SIZE {
@@ -352,8 +356,7 @@ impl SharedMemoryFactory for LinuxSharedMemoryFactory {
         };
 
         if let Some(path) = path {
-            fs::remove_file(&path)
-                .map_err(|e| SharedMemoryError::Io(e.to_string()))?;
+            fs::remove_file(&path).map_err(|e| SharedMemoryError::Io(e.to_string()))?;
             Ok(())
         } else {
             Err(SharedMemoryError::NotFound(name.to_string()))
@@ -395,7 +398,10 @@ mod tests {
         let mut region = factory.create("test2", 10).unwrap();
 
         let result = region.write(1, b"this is too long");
-        assert!(matches!(result, Err(SharedMemoryError::DataTooLarge { .. })));
+        assert!(matches!(
+            result,
+            Err(SharedMemoryError::DataTooLarge { .. })
+        ));
 
         factory.remove("test2").unwrap();
     }

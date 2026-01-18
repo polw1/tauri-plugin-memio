@@ -1,12 +1,12 @@
-use std::path::Path;
 use serde_json::to_string as json_string;
-use tauri::{AppHandle, Runtime, Manager};
+use std::path::Path;
+use tauri::{AppHandle, Manager, Runtime};
 
 /// Sets the WebKit extension directory environment variable.
-/// 
+///
 /// This function is Linux-specific and configures the path where WebKitGTK
 /// will look for web extensions.
-/// 
+///
 /// # Errors
 /// Returns an error if the directory does not exist.
 pub fn set_webkit_extension_dir(path: impl AsRef<Path>) -> Result<(), String> {
@@ -21,11 +21,6 @@ pub fn set_webkit_extension_dir(path: impl AsRef<Path>) -> Result<(), String> {
     unsafe {
         std::env::set_var("WEBKIT_WEB_EXTENSION_DIRECTORY", path);
     }
-    Ok(())
-}
-
-pub(crate) fn ensure_webkit_extension_dir() -> Result<(), String> {
-    let _ = resolve_webkit_extension_dir()?;
     Ok(())
 }
 
@@ -103,14 +98,14 @@ pub(crate) fn build_shared_paths_script() -> Option<String> {
         if let Ok(value) = json_string(&path) {
             script.push_str("globalThis.__memioSharedRegistryPath = ");
             script.push_str(&value);
-            script.push_str(";");
+            script.push(';');
         }
     }
     if let Some(path) = shared_path {
         if let Ok(value) = json_string(&path) {
             script.push_str("globalThis.__memioSharedPath = ");
             script.push_str(&value);
-            script.push_str(";");
+            script.push(';');
         }
     }
     if script.is_empty() {

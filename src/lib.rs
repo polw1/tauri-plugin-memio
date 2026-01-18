@@ -1,6 +1,6 @@
 use tauri::plugin::{Builder, TauriPlugin};
-use tauri::Runtime;
 use tauri::Manager;
+use tauri::Runtime;
 
 #[cfg(target_os = "android")]
 pub mod android;
@@ -12,22 +12,22 @@ pub mod windows;
 pub mod windows_shared_buffer;
 
 mod commands;
-pub use commands::{memio_upload, memio_read, UploadResult, ReadResult};
+pub use commands::{memio_read, memio_upload, ReadResult, UploadResult};
 
 /// Initializes the Memio plugin.
 pub fn init<R: Runtime>() -> TauriPlugin<R> {
     #[cfg(target_os = "linux")]
     {
-        if let Err(err) = ensure_webkit_extension_dir() {
+        if let Err(err) = linux::resolve_webkit_extension_dir() {
             eprintln!("Memio WebKit extension setup failed: {:?}", err);
         }
     }
 
     let builder = Builder::new("memio")
-        .setup(move |app, api| {
+        .setup(move |app, _api| {
             #[cfg(target_os = "android")]
             {
-                match android::register_android_plugin(api) {
+                match android::register_android_plugin(_api) {
                     Ok(handle) => {
                         let memio_android = android::MemioAndroid(handle);
                         app.manage(memio_android);
@@ -52,15 +52,23 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
         .invoke_handler(tauri::generate_handler![
             commands::memio_upload,
             commands::memio_read,
+            // Windows SharedBuffer API
+            #[cfg(target_os = "windows")]
+            windows::prepare_upload_buffer,
+            #[cfg(target_os = "windows")]
+            windows::commit_upload_buffer,
+            #[cfg(target_os = "windows")]
+            windows::send_download_buffer,
+            // Utility commands
+            #[cfg(target_os = "windows")]
+            windows::create_shared_buffer_windows,
+            #[cfg(target_os = "windows")]
+            windows::list_shared_buffers_windows,
+            #[cfg(target_os = "windows")]
+            windows::has_shared_buffer,
         ]);
 
     builder.build()
-}
-
-#[cfg(target_os = "linux")]
-fn ensure_webkit_extension_dir() -> Result<(), String> {
-    let _ = linux::resolve_webkit_extension_dir()?;
-    Ok(())
 }
 
 /// Builds webview windows with the Memio WebKit extension on Linux.

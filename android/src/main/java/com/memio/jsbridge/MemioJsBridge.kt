@@ -8,8 +8,8 @@ import com.memio.spec.MemioSpec
 import java.nio.ByteOrder
 
 /**
- * Minimal JavaScript bridge for MemioTauri shared memory.
- * 
+ * Minimal JavaScript bridge for MemioTauri regions.
+ *
  * Only provides fast version polling - actual data transfer uses:
  * - READ: memio:// protocol (MemioWebViewClient)
  * - WRITE: upload_file_from_uri (MemioPlugin)
@@ -17,7 +17,7 @@ import java.nio.ByteOrder
 class MemioJsBridge(private val webView: WebView) {
     
     /**
-     * Gets the version number from shared memory (fast check).
+     * Gets the version number from the memio region (fast check).
      * Used by frontend for polling changes without reading data.
      */
     @JavascriptInterface
@@ -33,7 +33,7 @@ class MemioJsBridge(private val webView: WebView) {
     }
     
     /**
-     * Checks if a shared buffer exists.
+     * Checks if a memio buffer exists.
      */
     @JavascriptInterface
     fun hasBuffer(name: String): Boolean {
@@ -41,8 +41,9 @@ class MemioJsBridge(private val webView: WebView) {
     }
 
     /**
-     * Writes data to shared memory (Base64 payload from JS).
-     * This keeps the API simple for demos, while reads still use memio://.
+     * Legacy write using Base64 payloads from JS.
+     *
+     * Current clients should use upload_file_from_uri instead.
      */
     @JavascriptInterface
     fun write(name: String, version: Long, base64: String): Boolean {

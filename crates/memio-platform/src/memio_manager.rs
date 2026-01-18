@@ -112,7 +112,7 @@ impl MemioManager {
     pub fn new() -> Result<Self, SharedMemoryError> {
         // Clean up any orphaned files from previous sessions
         crate::cleanup_orphaned_files();
-        
+
         let registry = SharedRegistry::new_linux()
             .map_err(|e| SharedMemoryError::CreateFailed(e.to_string()))?;
         Ok(Self {
@@ -194,14 +194,20 @@ impl MemioManager {
     /// println!("Wrote {} bytes at version {}", result.length, result.version);
     /// ```
     #[cfg(target_os = "linux")]
-    pub fn write(&self, name: &str, version: u64, data: &[u8]) -> Result<WriteResult, SharedMemoryError> {
+    pub fn write(
+        &self,
+        name: &str,
+        version: u64,
+        data: &[u8],
+    ) -> Result<WriteResult, SharedMemoryError> {
         let mut registry = self.registry.lock()?;
-        
-        let region = registry.get_mut(name)
+
+        let region = registry
+            .get_mut(name)
             .ok_or_else(|| SharedMemoryError::NotFound(name.to_string()))?;
-        
+
         let info = region.write(version, data)?;
-        
+
         Ok(WriteResult {
             version: info.version,
             length: info.length,
@@ -209,9 +215,14 @@ impl MemioManager {
     }
 
     #[cfg(target_os = "android")]
-    pub fn write(&self, name: &str, version: u64, data: &[u8]) -> Result<WriteResult, SharedMemoryError> {
+    pub fn write(
+        &self,
+        name: &str,
+        version: u64,
+        data: &[u8],
+    ) -> Result<WriteResult, SharedMemoryError> {
         android::write_to_shared(name, version, data)?;
-        
+
         Ok(WriteResult {
             version,
             length: data.len(),
@@ -219,10 +230,14 @@ impl MemioManager {
     }
 
     #[cfg(target_os = "windows")]
-    pub fn write(&self, name: &str, version: u64, data: &[u8]) -> Result<WriteResult, SharedMemoryError> {
-        windows::write_to_shared(name, version, data)
-            .map_err(|e| SharedMemoryError::Io(e))?;
-        
+    pub fn write(
+        &self,
+        name: &str,
+        version: u64,
+        data: &[u8],
+    ) -> Result<WriteResult, SharedMemoryError> {
+        windows::write_to_shared(name, version, data).map_err(|e| SharedMemoryError::Io(e))?;
+
         Ok(WriteResult {
             version,
             length: data.len(),
@@ -230,7 +245,12 @@ impl MemioManager {
     }
 
     #[cfg(not(any(target_os = "linux", target_os = "android", target_os = "windows")))]
-    pub fn write(&self, _name: &str, _version: u64, _data: &[u8]) -> Result<WriteResult, SharedMemoryError> {
+    pub fn write(
+        &self,
+        _name: &str,
+        _version: u64,
+        _data: &[u8],
+    ) -> Result<WriteResult, SharedMemoryError> {
         Err(SharedMemoryError::PlatformNotSupported)
     }
 
@@ -250,13 +270,14 @@ impl MemioManager {
     #[cfg(target_os = "linux")]
     pub fn read(&self, name: &str) -> Result<ReadResult, SharedMemoryError> {
         let registry = self.registry.lock()?;
-        
-        let region = registry.get(name)
+
+        let region = registry
+            .get(name)
             .ok_or_else(|| SharedMemoryError::NotFound(name.to_string()))?;
-        
+
         let info = region.info()?;
         let data = region.read()?;
-        
+
         Ok(ReadResult {
             data,
             version: info.version,
@@ -266,22 +287,16 @@ impl MemioManager {
     #[cfg(target_os = "android")]
     pub fn read(&self, name: &str) -> Result<ReadResult, SharedMemoryError> {
         let (version, data) = android::read_from_shared(name)?;
-        
-        Ok(ReadResult {
-            data,
-            version,
-        })
+
+        Ok(ReadResult { data, version })
     }
 
     #[cfg(target_os = "windows")]
     pub fn read(&self, name: &str) -> Result<ReadResult, SharedMemoryError> {
-        let (version, data) = windows::read_from_shared(name)
-            .map_err(|e| SharedMemoryError::Io(e))?;
-        
-        Ok(ReadResult {
-            data,
-            version,
-        })
+        let (version, data) =
+            windows::read_from_shared(name).map_err(|e| SharedMemoryError::Io(e))?;
+
+        Ok(ReadResult { data, version })
     }
 
     #[cfg(not(any(target_os = "linux", target_os = "android", target_os = "windows")))]
@@ -311,10 +326,11 @@ impl MemioManager {
     #[cfg(target_os = "linux")]
     pub fn version(&self, name: &str) -> Result<u64, SharedMemoryError> {
         let registry = self.registry.lock()?;
-        
-        let region = registry.get(name)
+
+        let region = registry
+            .get(name)
             .ok_or_else(|| SharedMemoryError::NotFound(name.to_string()))?;
-        
+
         let info = region.info()?;
         Ok(info.version)
     }
@@ -329,8 +345,7 @@ impl MemioManager {
 
     #[cfg(target_os = "windows")]
     pub fn version(&self, name: &str) -> Result<u64, SharedMemoryError> {
-        windows::get_version(name)
-            .map_err(|e| SharedMemoryError::Io(e))
+        windows::get_version(name).map_err(|e| SharedMemoryError::Io(e))
     }
 
     #[cfg(not(any(target_os = "linux", target_os = "android", target_os = "windows")))]
@@ -348,23 +363,25 @@ impl MemioManager {
     #[cfg(target_os = "linux")]
     pub fn info(&self, name: &str) -> Result<SharedStateInfo, SharedMemoryError> {
         let registry = self.registry.lock()?;
-        
-        let region = registry.get(name)
+
+        let region = registry
+            .get(name)
             .ok_or_else(|| SharedMemoryError::NotFound(name.to_string()))?;
-        
+
         region.info()
     }
 
     #[cfg(target_os = "android")]
     pub fn info(&self, name: &str) -> Result<SharedStateInfo, SharedMemoryError> {
         let buffers = self.buffers.lock()?;
-        
-        let buffer_info = buffers.get(name)
+
+        let buffer_info = buffers
+            .get(name)
             .ok_or_else(|| SharedMemoryError::NotFound(name.to_string()))?;
-        
+
         let (version, data) = android::read_from_shared(name)?;
         let fd = android::get_shared_fd(name).ok();
-        
+
         Ok(SharedStateInfo {
             name: name.to_string(),
             path: None,
@@ -378,13 +395,14 @@ impl MemioManager {
     #[cfg(target_os = "windows")]
     pub fn info(&self, name: &str) -> Result<SharedStateInfo, SharedMemoryError> {
         let buffers = self.buffers.lock()?;
-        
-        let buffer_info = buffers.get(name)
+
+        let buffer_info = buffers
+            .get(name)
             .ok_or_else(|| SharedMemoryError::NotFound(name.to_string()))?;
-        
-        let (version, data) = windows::read_from_shared(name)
-            .map_err(|e| SharedMemoryError::Io(e))?;
-        
+
+        let (version, data) =
+            windows::read_from_shared(name).map_err(|e| SharedMemoryError::Io(e))?;
+
         Ok(SharedStateInfo {
             name: name.to_string(),
             path: None,
@@ -530,15 +548,17 @@ mod tests {
     #[cfg(any(target_os = "linux", target_os = "android"))]
     fn test_create_and_write() {
         let manager = MemioManager::new().expect("Failed to create manager");
-        
-        manager.create_buffer("test", 1024).expect("Failed to create buffer");
-        
+
+        manager
+            .create_buffer("test", 1024)
+            .expect("Failed to create buffer");
+
         let data = b"Hello, MemioTauri!";
         let result = manager.write("test", 1, data).expect("Failed to write");
-        
+
         assert_eq!(result.version, 1);
         assert_eq!(result.length, data.len());
-        
+
         let read_result = manager.read("test").expect("Failed to read");
         assert_eq!(read_result.data, data);
         assert_eq!(read_result.version, 1);

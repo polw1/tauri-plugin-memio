@@ -1,7 +1,7 @@
 /**
  * Unified Memio API
  * 
- * Simple, cross-platform API for memio region operations.
+ * Cross-platform API for memio region operations.
  * The framework handles all platform-specific complexity internally.
  * 
  * ## Usage

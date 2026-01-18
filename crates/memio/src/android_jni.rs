@@ -1,6 +1,6 @@
 //! JNI bindings for MemioSharedMemory (Android)
-//! 
-//! Simplified to keep only the methods actually used:
+//!
+//! Methods used:
 //! - nativeWrite: Write data to memio region
 //! - nativeGetVersion: Get version from memio region header (via direct buffer)
 //! - nativeExists: Check if a memio region exists
@@ -11,9 +11,7 @@ use jni::objects::{JByteArray, JObject, JString, JValue};
 use jni::sys::jlong;
 use jni::JNIEnv;
 
-use memio_platform::{
-    get_shared_ptr, has_shared_region, list_shared_regions, write_to_shared,
-};
+use memio_platform::{get_shared_ptr, has_shared_region, list_shared_regions, write_to_shared};
 
 /// Writes data to a named memio region
 /// Returns true on success, false on error

@@ -7,7 +7,7 @@
 //! The implementation uses the correct platform-specific method.
 
 use serde::{Deserialize, Serialize};
-use tauri::{command, AppHandle, Runtime, Manager};
+use tauri::{command, AppHandle, Manager, Runtime};
 
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -66,8 +66,7 @@ pub async fn memio_upload<R: Runtime>(
             &fileUri
         };
 
-        let data = std::fs::read(file_path)
-            .map_err(|e| format!("Failed to read file: {}", e))?;
+        let data = std::fs::read(file_path).map_err(|e| format!("Failed to read file: {}", e))?;
 
         let manager = app
             .try_state::<std::sync::Arc<MemioManager>>()
@@ -107,13 +106,15 @@ pub fn memio_read<R: Runtime>(
     #[allow(non_snake_case)] lastVersion: Option<i64>,
 ) -> Result<ReadResult, String> {
     use memio_platform::MemioManager;
-    
-    let manager = app.try_state::<std::sync::Arc<MemioManager>>()
+
+    let manager = app
+        .try_state::<std::sync::Arc<MemioManager>>()
         .ok_or("MemioManager not available")?;
-    
-    let result = manager.read(&bufferName)
+
+    let result = manager
+        .read(&bufferName)
         .map_err(|e| format!("Failed to read from shared memory: {:?}", e))?;
-    
+
     // Check if version changed
     if let Some(last) = lastVersion {
         if result.version as i64 <= last {
@@ -124,7 +125,7 @@ pub fn memio_read<R: Runtime>(
             });
         }
     }
-    
+
     Ok(ReadResult {
         success: true,
         version: result.version as i64,

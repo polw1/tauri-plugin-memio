@@ -1,12 +1,8 @@
 //! Header read/write functions for memio regions.
 
 pub use crate::shared_state_spec::{
-    SHARED_STATE_ENDIANNESS,
-    SHARED_STATE_HEADER_SIZE,
-    SHARED_STATE_LENGTH_OFFSET,
-    SHARED_STATE_MAGIC,
-    SHARED_STATE_MAGIC_OFFSET,
-    SHARED_STATE_VERSION_OFFSET,
+    SHARED_STATE_ENDIANNESS, SHARED_STATE_HEADER_SIZE, SHARED_STATE_LENGTH_OFFSET,
+    SHARED_STATE_MAGIC, SHARED_STATE_MAGIC_OFFSET, SHARED_STATE_VERSION_OFFSET,
 };
 
 use crate::{MemioError, MemioResult};
@@ -22,11 +18,15 @@ pub fn validate_magic(buf: &[u8]) -> bool {
 /// Returns Ok if magic is valid, Err otherwise.
 pub fn validate_magic_result(buf: &[u8]) -> MemioResult<()> {
     if buf.len() < SHARED_STATE_HEADER_SIZE {
-        return Err(MemioError::Internal("Shared state header too small.".to_string()));
+        return Err(MemioError::Internal(
+            "Shared state header too small.".to_string(),
+        ));
     }
     let magic = read_u64_le(buf, SHARED_STATE_MAGIC_OFFSET);
     if magic != SHARED_STATE_MAGIC {
-        return Err(MemioError::Internal("Invalid shared state magic.".to_string()));
+        return Err(MemioError::Internal(
+            "Invalid shared state magic.".to_string(),
+        ));
     }
     Ok(())
 }
@@ -34,7 +34,9 @@ pub fn validate_magic_result(buf: &[u8]) -> MemioResult<()> {
 /// Writes magic, version, and length to buffer.
 pub fn write_header(buf: &mut [u8], version: u64, length: usize) -> MemioResult<()> {
     if buf.len() < SHARED_STATE_HEADER_SIZE {
-        return Err(MemioError::Internal("Shared state header too small.".to_string()));
+        return Err(MemioError::Internal(
+            "Shared state header too small.".to_string(),
+        ));
     }
     write_u64_le(buf, SHARED_STATE_MAGIC_OFFSET, SHARED_STATE_MAGIC);
     write_u64_le(buf, SHARED_STATE_VERSION_OFFSET, version);
@@ -86,29 +88,33 @@ pub fn read_length(buf: &[u8]) -> Option<usize> {
 }
 
 /// Reads header from raw pointer. Pointer must be valid for SHARED_STATE_HEADER_SIZE bytes.
+/// # Safety
+/// Caller must ensure `ptr` is valid for at least `capacity` bytes.
 pub unsafe fn read_header_ptr(ptr: *const u8, capacity: usize) -> Option<(u64, usize)> {
     if ptr.is_null() {
         return None;
     }
-    
+
     unsafe {
         let magic = read_u64_ptr(ptr, SHARED_STATE_MAGIC_OFFSET);
         if magic != SHARED_STATE_MAGIC {
             return None;
         }
-        
+
         let version = read_u64_ptr(ptr, SHARED_STATE_VERSION_OFFSET);
         let length = read_u64_ptr(ptr, SHARED_STATE_LENGTH_OFFSET) as usize;
-        
+
         if length > capacity {
             return None;
         }
-        
+
         Some((version, length))
     }
 }
 
 /// Writes header to raw pointer. Pointer must be valid for SHARED_STATE_HEADER_SIZE bytes.
+/// # Safety
+/// Caller must ensure `ptr` is valid for at least `SHARED_STATE_HEADER_SIZE` bytes.
 pub unsafe fn write_header_ptr(ptr: *mut u8, version: u64, length: usize) {
     unsafe {
         write_u64_ptr(ptr, SHARED_STATE_MAGIC_OFFSET, SHARED_STATE_MAGIC);
@@ -134,6 +140,8 @@ pub fn read_u64_le(buf: &[u8], offset: usize) -> u64 {
 
 /// Writes u64 in little-endian to pointer at offset.
 #[inline]
+/// # Safety
+/// Caller must ensure `ptr` is valid for at least `offset + 8` bytes.
 pub unsafe fn write_u64_ptr(ptr: *mut u8, offset: usize, value: u64) {
     let bytes = value.to_le_bytes();
     unsafe {
@@ -143,6 +151,8 @@ pub unsafe fn write_u64_ptr(ptr: *mut u8, offset: usize, value: u64) {
 
 /// Reads u64 in little-endian from pointer at offset.
 #[inline]
+/// # Safety
+/// Caller must ensure `ptr` is valid for at least `offset + 8` bytes.
 pub unsafe fn read_u64_ptr(ptr: *const u8, offset: usize) -> u64 {
     let mut bytes = [0u8; 8];
     unsafe {
@@ -171,7 +181,7 @@ mod tests {
         assert!(!validate_magic(&buf));
         assert!(read_header(&buf, 100).is_none());
     }
-    
+
     #[test]
     fn test_read_version() {
         let mut buf = vec![0u8; SHARED_STATE_HEADER_SIZE];

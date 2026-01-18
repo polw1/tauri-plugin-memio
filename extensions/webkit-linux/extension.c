@@ -359,7 +359,7 @@ static gboolean refresh_shared_buffers(gpointer user_data) {
 }
 
 // JavaScript callback: memioWriteSharedBuffer(name, uint8Array)
-// Writes data from JavaScript directly to shared memory (no caching for simplicity)
+// Writes data from JavaScript directly to the memio region (no caching)
 static JSCValue *js_write_shared_buffer(GPtrArray *args) {
   if (args->len < 2) {
     g_warning("memioWriteSharedBuffer requires 2 arguments: name and data");

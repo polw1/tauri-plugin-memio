@@ -31,7 +31,7 @@ import android.webkit.WebView
  *     ↓
  * Kotlin reads via ContentResolver
  *     ↓
- * Writes directly to shared memory (NO BASE64!)
+ * Writes directly to the memio region (no Base64)
  * ```
  * 
  * This is how real Android apps (Drive, Dropbox, etc) handle uploads efficiently.

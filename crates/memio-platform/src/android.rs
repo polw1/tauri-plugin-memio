@@ -4,14 +4,14 @@
 
 use std::collections::HashMap;
 use std::os::unix::io::RawFd;
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Mutex;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use once_cell::sync::Lazy;
 
 use memio_core::{
-    SharedMemoryError, SharedMemoryFactory, SharedMemoryRegion, SharedStateInfo,
-    SHARED_STATE_HEADER_SIZE, read_header_ptr, write_header_ptr,
+    SHARED_STATE_HEADER_SIZE, SharedMemoryError, SharedMemoryFactory, SharedMemoryRegion,
+    SharedStateInfo, read_header_ptr, write_header_ptr,
 };
 
 const HEADER_SIZE: usize = SHARED_STATE_HEADER_SIZE;
@@ -196,11 +196,13 @@ impl SharedMemoryFactory for AndroidSharedMemoryFactory {
             std::process::id(),
             COUNTER.fetch_add(1, Ordering::Relaxed)
         );
-        let region_name_cstr =
-            CString::new(region_name).map_err(|_| SharedMemoryError::CreateFailed("Invalid name".into()))?;
+        let region_name_cstr = CString::new(region_name)
+            .map_err(|_| SharedMemoryError::CreateFailed("Invalid name".into()))?;
 
-        let shared_mem = SharedMemory::create(Some(&region_name_cstr), total_size)
-            .map_err(|e| SharedMemoryError::CreateFailed(format!("ASharedMemory create failed: {:?}", e)))?;
+        let shared_mem =
+            SharedMemory::create(Some(&region_name_cstr), total_size).map_err(|e| {
+                SharedMemoryError::CreateFailed(format!("ASharedMemory create failed: {:?}", e))
+            })?;
 
         let fd = shared_mem.into_raw_fd();
 
@@ -230,13 +232,16 @@ impl SharedMemoryFactory for AndroidSharedMemoryFactory {
 
         // Store in registry - this is the ONLY copy that owns the resources
         let mut registry = REGISTRY.lock().unwrap();
-        registry.insert(name.to_string(), AndroidSharedMemoryRegion {
-            name: name.to_string(),
-            fd,
-            ptr,
-            size: total_size,
-            capacity,
-        });
+        registry.insert(
+            name.to_string(),
+            AndroidSharedMemoryRegion {
+                name: name.to_string(),
+                fd,
+                ptr,
+                size: total_size,
+                capacity,
+            },
+        );
 
         // Return a non-owning reference (fd = -1 means don't close on drop)
         Ok(AndroidSharedMemoryRegion {

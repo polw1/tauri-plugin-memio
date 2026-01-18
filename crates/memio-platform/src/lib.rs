@@ -32,13 +32,13 @@ pub mod windows;
 
 // Platform-specific utilities (Linux only for now)
 #[cfg(target_os = "linux")]
-pub mod shared_ring;
-#[cfg(target_os = "linux")]
 pub mod shared_file;
+#[cfg(target_os = "linux")]
+pub mod shared_ring;
 
 // High-level helpers
-pub mod registry;
 pub mod memio_shared;
+pub mod registry;
 
 /// Platform identifier for runtime detection.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -72,7 +72,12 @@ impl Platform {
         }
         #[cfg(all(
             target_arch = "wasm32",
-            not(any(target_os = "linux", target_os = "android", target_os = "macos", target_os = "windows"))
+            not(any(
+                target_os = "linux",
+                target_os = "android",
+                target_os = "macos",
+                target_os = "windows"
+            ))
         ))]
         {
             Platform::Wasm
@@ -174,17 +179,17 @@ pub use windows::{
 
 // Linux-specific utilities
 #[cfg(target_os = "linux")]
-pub use shared_ring::SharedRingBuffer;
-#[cfg(target_os = "linux")]
 pub use shared_file::SharedFileCache;
+#[cfg(target_os = "linux")]
+pub use shared_ring::SharedRingBuffer;
 
 // High-level helpers
 pub mod memio_manager;
-pub use registry::SharedRegistry;
-pub use memio_shared::MemioShared;
-pub use memio_manager::{MemioManager, memio_manager, ReadResult, WriteResult};
+pub use memio_manager::{MemioManager, ReadResult, WriteResult, memio_manager};
 #[cfg(target_os = "linux")]
 pub use memio_shared::LinuxMemioShared;
+pub use memio_shared::MemioShared;
+pub use registry::SharedRegistry;
 
 // Re-export core contracts
 pub use memio_core::{

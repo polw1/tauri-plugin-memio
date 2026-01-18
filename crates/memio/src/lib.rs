@@ -35,30 +35,25 @@
 
 // Core types
 pub use memio_core::{
-    MemioState, 
-    NoOpRegion, 
-    SharedMemoryRegion, 
-    SharedStateInfo,
-    SharedMemoryError,
-    SharedMemoryFactory,
+    Arena,
     MemioError,
-    MemioResult,
-    MemioModel,  // Derive macro
-    MemioSchema,
     MemioField,
     MemioFieldType,
+    MemioModel, // Derive macro
+    MemioResult,
     MemioScalarType,
-    Arena,
+    MemioSchema,
+    MemioState,
+    NoOpRegion,
+    SharedMemoryError,
+    SharedMemoryFactory,
+    SharedMemoryRegion,
+    SharedStateInfo,
 };
 
 // Unified cross-platform API
 pub use memio_platform::{
-    MemioManager, 
-    memio_manager, 
-    ReadResult, 
-    WriteResult,
-    Platform,
-    platform_factory,
+    memio_manager, platform_factory, MemioManager, Platform, ReadResult, WriteResult,
 };
 
 // Re-export rkyv for serialization
@@ -85,7 +80,7 @@ pub use rkyv;
 /// ```
 pub mod plugin {
     pub use tauri_plugin_memio::init;
-    
+
     #[cfg(target_os = "linux")]
     pub use tauri_plugin_memio::build_webview_windows;
 }
@@ -102,20 +97,14 @@ pub mod plugin {
 pub mod prelude {
     // Core types
     pub use crate::{
-        MemioManager,
-        MemioState,
-        MemioError,
-        MemioResult,
-        ReadResult,
-        WriteResult,
-        SharedStateInfo,
+        MemioError, MemioManager, MemioResult, MemioState, ReadResult, SharedStateInfo, WriteResult,
     };
-    
+
     // Derive macro
     pub use memio_core::MemioModel;
-    
+
     // rkyv traits for serialization
-    pub use rkyv::{Archive, Serialize, Deserialize};
+    pub use rkyv::{Archive, Deserialize, Serialize};
 }
 
 // ============================================================================
@@ -128,24 +117,14 @@ pub mod prelude {
 pub mod platform {
     #[cfg(target_os = "linux")]
     pub use memio_platform::{
-        LinuxSharedMemoryFactory, 
-        LinuxSharedMemoryRegion, 
-        LinuxMemioShared,
-        SharedFileCache, 
-        SharedRingBuffer, 
-        MemioShared,
-        SharedRegistry,
+        LinuxMemioShared, LinuxSharedMemoryFactory, LinuxSharedMemoryRegion, MemioShared,
+        SharedFileCache, SharedRegistry, SharedRingBuffer,
     };
 
     #[cfg(target_os = "android")]
     pub use memio_platform::{
-        get_shared_ptr, 
-        has_shared_region, 
-        list_shared_regions,
-        write_to_shared, 
-        AndroidSharedMemoryFactory, 
-        AndroidSharedMemoryRegion,
-        SHARED_STATE_HEADER_SIZE,
+        get_shared_ptr, has_shared_region, list_shared_regions, write_to_shared,
+        AndroidSharedMemoryFactory, AndroidSharedMemoryRegion, SHARED_STATE_HEADER_SIZE,
         SHARED_STATE_MAGIC,
     };
 }

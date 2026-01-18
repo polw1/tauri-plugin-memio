@@ -5,11 +5,11 @@ use std::path::PathBuf;
 
 pub mod arena;
 pub mod error;
-pub mod shared_state;
-pub mod state;
 pub mod schema;
-mod shared_state_spec;
 pub mod shared_header;
+pub mod shared_state;
+mod shared_state_spec;
+pub mod state;
 
 pub use arena::Arena;
 pub use error::{MemioError, MemioResult};
@@ -43,9 +43,13 @@ pub trait SharedMemoryRegion: Send + Sync + Debug {
     fn read(&self) -> Result<Vec<u8>, MemioError>;
 
     /// Returns pointer to data area.
+    /// # Safety
+    /// Implementations must return a valid pointer for the region's lifetime.
     unsafe fn data_ptr(&self) -> *const u8;
 
     /// Returns mutable pointer to data area.
+    /// # Safety
+    /// Implementations must return a valid mutable pointer for the region's lifetime.
     unsafe fn data_ptr_mut(&mut self) -> *mut u8;
 }
 
@@ -72,16 +76,15 @@ pub trait SharedMemoryFactory: Send + Sync {
 pub type BoxedRegion = Box<dyn SharedMemoryRegion>;
 pub type BoxedFactory = Box<dyn SharedMemoryFactory<Region = BoxedRegion>>;
 
-pub use shared_state::{SHARED_STATE_HEADER_SIZE, SHARED_STATE_MAGIC};
 pub use schema::{MemioField, MemioFieldType, MemioScalarType, MemioSchema, schema_json};
+pub use shared_state::{SHARED_STATE_HEADER_SIZE, SHARED_STATE_MAGIC};
 pub use state::{MemioState, NoOpRegion};
 
 pub use shared_header::{
-    SHARED_STATE_ENDIANNESS, SHARED_STATE_LENGTH_OFFSET, 
-    SHARED_STATE_MAGIC_OFFSET, SHARED_STATE_VERSION_OFFSET,
-    validate_magic, validate_magic_result, write_header, write_header_unchecked,
-    read_header, read_version, read_length, read_u64_le, write_u64_le,
-    read_header_ptr, write_header_ptr, read_u64_ptr, write_u64_ptr,
+    SHARED_STATE_ENDIANNESS, SHARED_STATE_LENGTH_OFFSET, SHARED_STATE_MAGIC_OFFSET,
+    SHARED_STATE_VERSION_OFFSET, read_header, read_header_ptr, read_length, read_u64_le,
+    read_u64_ptr, read_version, validate_magic, validate_magic_result, write_header,
+    write_header_ptr, write_header_unchecked, write_u64_le, write_u64_ptr,
 };
 
 pub use memio_macros::MemioModel;

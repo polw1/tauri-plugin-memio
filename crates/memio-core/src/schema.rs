@@ -2,17 +2,31 @@
 
 #[derive(Debug, Clone, Copy)]
 pub enum MemioScalarType {
-    U8, U16, U32, U64,
-    I8, I16, I32, I64,
-    F32, F64,
+    U8,
+    U16,
+    U32,
+    U64,
+    I8,
+    I16,
+    I32,
+    I64,
+    F32,
+    F64,
 }
 
 impl MemioScalarType {
     pub fn as_str(self) -> &'static str {
         match self {
-            Self::U8 => "u8", Self::U16 => "u16", Self::U32 => "u32", Self::U64 => "u64",
-            Self::I8 => "i8", Self::I16 => "i16", Self::I32 => "i32", Self::I64 => "i64",
-            Self::F32 => "f32", Self::F64 => "f64",
+            Self::U8 => "u8",
+            Self::U16 => "u16",
+            Self::U32 => "u32",
+            Self::U64 => "u64",
+            Self::I8 => "i8",
+            Self::I16 => "i16",
+            Self::I32 => "i32",
+            Self::I64 => "i64",
+            Self::F32 => "f32",
+            Self::F64 => "f64",
         }
     }
 }
@@ -39,7 +53,9 @@ pub fn schema_json<T: MemioSchema>() -> String {
     let fields = T::schema();
     let mut out = String::from("{\"fields\":[");
     for (idx, field) in fields.iter().enumerate() {
-        if idx > 0 { out.push(','); }
+        if idx > 0 {
+            out.push(',');
+        }
         out.push_str("{\"name\":\"");
         push_json_string(&mut out, field.name);
         out.push_str("\",\"offset\":");
@@ -55,7 +71,7 @@ pub fn schema_json<T: MemioSchema>() -> String {
                 out.push_str(elem.as_str());
                 out.push_str("\",\"len\":");
                 out.push_str(&len.to_string());
-                out.push_str("}");
+                out.push('}');
             }
         }
     }

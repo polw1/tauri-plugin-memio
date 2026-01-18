@@ -4,8 +4,8 @@
 
 use std::path::Path;
 
-use memio_core::{SharedMemoryFactory, MemioResult};
 use crate::registry::SharedRegistry;
+use memio_core::{MemioResult, SharedMemoryFactory};
 
 /// Wrapper for managing memio buffers by name.
 ///
@@ -40,18 +40,16 @@ impl<F: SharedMemoryFactory> MemioShared<F> {
     }
 
     /// Creates a new memio buffer and registers it under the provided name.
-    pub fn create_buffer(
-        &mut self,
-        name: impl Into<String>,
-        capacity: usize,
-    ) -> MemioResult<()> {
-        self.registry.create_buffer(name, capacity)
+    pub fn create_buffer(&mut self, name: impl Into<String>, capacity: usize) -> MemioResult<()> {
+        self.registry
+            .create_buffer(name, capacity)
             .map_err(|e| memio_core::MemioError::Internal(e.to_string()))
     }
 
     /// Gets a mutable reference to a buffer by name.
     pub fn get_buffer(&mut self, name: &str) -> MemioResult<&mut F::Region> {
-        self.registry.get_mut(name)
+        self.registry
+            .get_mut(name)
             .ok_or_else(|| memio_core::MemioError::Internal(format!("Buffer not found: {}", name)))
     }
 

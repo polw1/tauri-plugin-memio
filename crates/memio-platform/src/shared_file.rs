@@ -28,7 +28,9 @@ impl SharedFileCache {
     pub fn new() -> MemioResult<Self> {
         #[cfg(not(target_os = "linux"))]
         {
-            return Err(MemioError::Internal("SharedFileCache is Linux-only.".to_string()));
+            return Err(MemioError::Internal(
+                "SharedFileCache is Linux-only.".to_string(),
+            ));
         }
 
         #[cfg(target_os = "linux")]

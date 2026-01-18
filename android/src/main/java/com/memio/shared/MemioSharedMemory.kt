@@ -4,7 +4,7 @@ import android.util.Log
 import java.nio.ByteBuffer
 
 /**
- * Kotlin wrapper for native shared memory operations.
+ * Kotlin wrapper for native memio region operations.
  * 
  * Used by:
  * - MemioWebViewClient: getDirectBuffer() for memio:// reads
@@ -15,24 +15,24 @@ object MemioSharedMemory {
     
     private const val TAG = "MemioSharedMemory"
     
-    // Cache of direct ByteBuffers - true zero-copy for Kotlin access
+    // Cache of direct ByteBuffers for Kotlin access
     private val directBuffers = mutableMapOf<String, ByteBuffer>()
     
     /**
-     * Writes data to a named shared memory region.
+     * Writes data to a named memio region.
      * Used by MemioPlugin.uploadFileFromUri()
      */
     fun write(name: String, version: Long, data: ByteArray): Boolean {
         return try {
             nativeWrite(name, version, data)
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to write to shared memory '$name': ${e.message}")
+            Log.e(TAG, "Failed to write to memio region '$name': ${e.message}")
             false
         }
     }
     
     /**
-     * Gets the current version from the shared memory header.
+     * Gets the current version from the memio header.
      * Used by MemioJsBridge.getVersion() for fast version polling
      */
     fun getVersion(name: String): Long {
@@ -45,7 +45,7 @@ object MemioSharedMemory {
     }
     
     /**
-     * Checks if a shared memory region exists.
+     * Checks if a memio region exists.
      * Used by MemioJsBridge.hasBuffer()
      */
     fun exists(name: String): Boolean {
@@ -57,7 +57,7 @@ object MemioSharedMemory {
     }
     
     /**
-     * Lists all registered shared memory regions.
+     * Lists all registered memio regions.
      * Used by MemioJsBridge.listBuffers()
      */
     fun listRegions(): List<String> {
@@ -71,7 +71,7 @@ object MemioSharedMemory {
     }
     
     /**
-     * Gets a direct ByteBuffer for TRUE zero-copy access to shared memory.
+     * Gets a direct ByteBuffer for memio region access.
      * Used by MemioWebViewClient.serveMemioBuffer() for memio:// protocol
      * 
      * IMPORTANT: This buffer includes the 64-byte header:
@@ -105,5 +105,4 @@ object MemioSharedMemory {
     private external fun nativeListRegions(): Any
     private external fun nativeGetDirectBuffer(name: String): Any?
 }
-
 
