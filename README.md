@@ -20,7 +20,7 @@ memio = { path = "path/to/memioTauri/crates/memio" }
 // package.json
 {
   "dependencies": {
-    "memio-client": "file:path/to/memioTauri/packages/memio-client"
+    "memio-client": "file:path/to/memioTauri/guest-js/memio-client"
   }
 }
 ```

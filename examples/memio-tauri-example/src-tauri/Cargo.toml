@@ -19,7 +19,7 @@ tauri-build = { version = "2", features = [] }
 
 [dependencies]
 memio = { path = "../../../crates/memio" }
-tauri-plugin-memio = { path = "../../../crates/tauri-plugin-memio" }
+tauri-plugin-memio = { path = "../../.." }
 
 # Note: On Android, run `./scripts/setup-android.sh` after generating the project.
 # This manually configures Gradle to include the memio plugin without needing it as a direct dependency.

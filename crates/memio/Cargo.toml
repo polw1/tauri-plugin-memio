@@ -7,7 +7,7 @@ description = "MemioTauri - Ultra-fast shared memory for Tauri applications"
 [dependencies]
 memio-core = { path = "../memio-core" }
 memio-platform = { path = "../memio-platform" }
-tauri-plugin-memio = { path = "../tauri-plugin-memio" }
+tauri-plugin-memio = { path = "../.." }
 
 # Re-export rkyv for users
 rkyv = "0.8"

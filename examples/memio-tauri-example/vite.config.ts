@@ -10,7 +10,7 @@ export default defineConfig(async () => ({
   plugins: [vue()],
   resolve: {
     alias: {
-      "memio-client": resolve(__dirname, "../../packages/memio-client/src/index.ts"),
+      "memio-client": resolve(__dirname, "../../guest-js/memio-client/src/index.ts"),
     },
   },
 
@@ -35,7 +35,7 @@ export default defineConfig(async () => ({
       ignored: ["**/src-tauri/**"],
     },
     fs: {
-      allow: ["..", "../../packages/memio-client"],
+      allow: ["..", "../../guest-js/memio-client"],
     },
   },
 }));

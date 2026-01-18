@@ -39,7 +39,7 @@ MemioTauri provides a shared-memory data plane between a Tauri Rust backend and 
 
 - **Linux**: Uses WebKitGTK extension + direct mmap; no HTTP layer.
 - **Android**: Uses `memio://` protocol and JNI for shared memory access.
-- **Windows**: Uses SharedBuffer APIs (see code in `crates/tauri-plugin-memio`).
+- **Windows**: Uses SharedBuffer APIs (see code in `src/`).
 
 ## Further reading
 

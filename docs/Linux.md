@@ -259,8 +259,8 @@ Unlike Android, Linux **does not use an HTTP protocol** - the WebKit extension a
 |------|----------------|
 | `memio-platform/src/linux.rs` | LinuxSharedMemoryFactory, LinuxSharedMemoryRegion, mmap handling |
 | `memio-platform/src/registry.rs` | SharedRegistry - manages buffer manifest |
-| `tauri-plugin-memio/src/linux.rs` | Configures WEBKIT_WEB_EXTENSION_DIRECTORY and scripts |
-| `tauri-plugin-memio/src/lib.rs` | Plugin setup, injects environment variables |
+| `src/linux.rs` | Configures WEBKIT_WEB_EXTENSION_DIRECTORY and scripts |
+| `src/lib.rs` | Plugin setup, injects environment variables |
 
 ### WebKit Extension (C)
 

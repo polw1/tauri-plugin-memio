@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-memio-upload"
+description = "Enables the memio_upload command without any pre-configured scope."
+commands.allow = ["memio_upload"]
+
+[[permission]]
+identifier = "deny-memio-upload"
+description = "Denies the memio_upload command without any pre-configured scope."
+commands.deny = ["memio_upload"]

@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-commit-upload-buffer"
+description = "Enables the commit_upload_buffer command without any pre-configured scope."
+commands.allow = ["commit_upload_buffer"]
+
+[[permission]]
+identifier = "deny-commit-upload-buffer"
+description = "Denies the commit_upload_buffer command without any pre-configured scope."
+commands.deny = ["commit_upload_buffer"]

@@ -32,7 +32,7 @@ else
 
 // MemioTauri plugin (manual include - bypasses Tauri CLI detection)
 include ':tauri-plugin-memio'
-project(':tauri-plugin-memio').projectDir = new File("../../../../../crates/tauri-plugin-memio/android")
+project(':tauri-plugin-memio').projectDir = new File("../../../../../android")
 EOF
     echo "✅ settings.gradle updated"
 fi

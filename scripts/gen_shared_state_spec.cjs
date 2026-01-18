@@ -74,11 +74,11 @@ writeFileSync(
   rustModule
 );
 writeFileSync(
-  resolve(root, "packages", "memio-client", "src", "shared-state-spec.ts"),
+  resolve(root, "guest-js", "memio-client", "src", "shared-state-spec.ts"),
   tsModule
 );
 writeFileSync(
-  resolve(root, "packages", "memio-client", "src", "shared-manifest-spec.ts"),
+  resolve(root, "guest-js", "memio-client", "src", "shared-manifest-spec.ts"),
   manifestTsModule
 );
 writeFileSync(
@@ -86,12 +86,12 @@ writeFileSync(
   cHeader
 );
 writeFileSync(
-  resolve(root, "crates", "tauri-plugin-memio", "android", "src", "main", "java", "com", "memio", "spec", "MemioSpec.kt"),
+  resolve(root, "android", "src", "main", "java", "com", "memio", "spec", "MemioSpec.kt"),
   kotlinConstants
 );
 console.log("✅ Generated shared state spec files:");
 console.log("   - crates/memio-core/src/shared_state_spec.rs");
-console.log("   - packages/memio-client/src/shared-state-spec.ts");
-console.log("   - packages/memio-client/src/shared-manifest-spec.ts");
+console.log("   - guest-js/memio-client/src/shared-state-spec.ts");
+console.log("   - guest-js/memio-client/src/shared-manifest-spec.ts");
 console.log("   - extensions/webkit-linux/memio_spec.h");
-console.log("   - crates/tauri-plugin-memio/android/.../spec/MemioSpec.kt");
+console.log("   - android/.../spec/MemioSpec.kt");

@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-memio-read"
+description = "Enables the memio_read command without any pre-configured scope."
+commands.allow = ["memio_read"]
+
+[[permission]]
+identifier = "deny-memio-read"
+description = "Denies the memio_read command without any pre-configured scope."
+commands.deny = ["memio_read"]

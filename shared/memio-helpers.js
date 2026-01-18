@@ -6,7 +6,7 @@
  * 
  * IMPORTANT: Keep implementations synchronized with:
  * - extensions/webkit-linux/extension.c (Linux WebKit)
- * - crates/tauri-plugin-memio/android/src/main/java/com/memio/jsbridge/MemioJsBridge.kt (Android)
+ * - android/src/main/java/com/memio/jsbridge/MemioJsBridge.kt (Android)
  * 
  * ## Architecture (Android - Zero Base64)
  * 

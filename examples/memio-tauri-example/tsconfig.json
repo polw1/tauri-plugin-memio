@@ -7,7 +7,7 @@
     "skipLibCheck": true,
     "baseUrl": ".",
     "paths": {
-      "memio-client": ["../../packages/memio-client/src/index.ts"]
+      "memio-client": ["../../guest-js/memio-client/src/index.ts"]
     },
 
     /* Bundler mode */

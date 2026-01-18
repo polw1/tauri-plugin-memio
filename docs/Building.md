@@ -46,7 +46,7 @@ git clone https://github.com/pdc-labs/memioTauri.git
 cd memioTauri
 
 # Build TypeScript client
-cd packages/memio-client
+cd guest-js/memio-client
 npm install
 npm run build
 cd ../..
@@ -196,17 +196,19 @@ memioTauri/
 │   ├── memio-platform/          # Platform implementations
 │   │   ├── src/linux.rs         # Linux /dev/shm + mmap
 │   │   └── src/android.rs       # Android ASharedMemory
-│   └── tauri-plugin-memio/      # Tauri plugin
-│       ├── src/lib.rs           # Plugin setup
-│       ├── src/linux.rs         # WebKit extension config
-│       ├── src/android.rs       # upload_file_from_uri command
-│       └── android/src/main/java/com/memio/
-│           ├── MemioPlugin.kt
-│           ├── MemioWebViewClient.kt
-│           ├── MemioWebChromeClient.kt
-│           ├── MemioJsBridge.kt
-│           └── shared/MemioSharedMemory.kt
-├── packages/
+├── src/                         # Tauri plugin
+│   ├── lib.rs                   # Plugin setup
+│   ├── linux.rs                 # WebKit extension config
+│   ├── android.rs               # upload_file_from_uri command
+│   └── windows.rs               # SharedBuffer commands
+├── android/                     # Android runtime for plugin
+│   └── src/main/java/com/memio/
+│       ├── MemioPlugin.kt
+│       ├── MemioWebViewClient.kt
+│       ├── MemioWebChromeClient.kt
+│       ├── MemioJsBridge.kt
+│       └── shared/MemioSharedMemory.kt
+├── guest-js/
 │   └── memio-client/            # TypeScript client
 │       └── src/
 │           ├── client.ts        # MemioClient API
@@ -241,9 +243,9 @@ node scripts/gen_shared_state_spec.js
 
 This generates:
 - `crates/memio-core/src/shared_state_spec.rs`
-- `packages/memio-client/src/shared-state-spec.ts`
+- `guest-js/memio-client/src/shared-state-spec.ts`
 - `extensions/webkit-linux/memio_spec.h`
-- `crates/tauri-plugin-memio/android/.../MemioSpec.kt`
+- `android/.../MemioSpec.kt`
 
 ### Running Tests
 
@@ -252,7 +254,7 @@ This generates:
 cargo test
 
 # TypeScript tests
-cd packages/memio-client
+cd guest-js/memio-client
 npm test
 ```
 

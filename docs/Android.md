@@ -134,7 +134,7 @@ The Android implementation removes traditional Base64 serialization using:
 │                              RUST MIDDLEWARE                                │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
-│  // tauri-plugin-memio/src/commands.rs                                      │
+│  // src/commands.rs                                      │
 │                                                                             │
 │  #[command]                                                                 │
 │  pub async fn memio_upload(                                                 │
@@ -259,8 +259,8 @@ The Android implementation removes traditional Base64 serialization using:
 |------|----------------|
 | `memio/src/android_jni.rs` | JNI exports |
 | `memio-platform/src/android.rs` | ASharedMemory implementation |
-| `tauri-plugin-memio/src/commands.rs` | Unified `memio_upload` command |
-| `tauri-plugin-memio/src/android.rs` | Android plugin bridge (run_mobile_plugin) |
+| `src/commands.rs` | Unified `memio_upload` command |
+| `src/android.rs` | Android plugin bridge (run_mobile_plugin) |
 
 ### TypeScript
 
