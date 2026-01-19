@@ -15,6 +15,16 @@ The implementation varies by platform (for example, `/dev/shm` on Linux, `AShare
 
 See [Building and Running](docs/Building.md) for complete setup instructions.
 
+## Supported Platforms
+
+| Platform | Supported |
+| -------- | --------- |
+| Linux    | ✓         |
+| Windows  | ✓         |
+| Android  | ✓         |
+| macOS    | x         |
+| iOS      | x         |
+
 **Quick install:**
 
 ```toml
