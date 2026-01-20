@@ -9,6 +9,8 @@ Default permissions for the Memio plugin - allows zero-copy SharedBuffer operati
 - `allow-prepare-upload-buffer`
 - `allow-commit-upload-buffer`
 - `allow-send-download-buffer`
+- `allow-start-upload-stream`
+- `allow-stop-upload-stream`
 - `allow-create-shared-buffer-windows`
 - `allow-list-shared-buffers-windows`
 - `allow-has-shared-buffer`
@@ -226,6 +228,58 @@ Enables the send_download_buffer command without any pre-configured scope.
 <td>
 
 Denies the send_download_buffer command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`memio:allow-start-upload-stream`
+
+</td>
+<td>
+
+Enables the start_upload_stream command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`memio:deny-start-upload-stream`
+
+</td>
+<td>
+
+Denies the start_upload_stream command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`memio:allow-stop-upload-stream`
+
+</td>
+<td>
+
+Enables the stop_upload_stream command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`memio:deny-stop-upload-stream`
+
+</td>
+<td>
+
+Denies the stop_upload_stream command without any pre-configured scope.
 
 </td>
 </tr>

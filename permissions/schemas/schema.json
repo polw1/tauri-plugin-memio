@@ -391,6 +391,30 @@
           "markdownDescription": "Denies the send_download_buffer command without any pre-configured scope."
         },
         {
+          "description": "Enables the start_upload_stream command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-start-upload-stream",
+          "markdownDescription": "Enables the start_upload_stream command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the start_upload_stream command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-start-upload-stream",
+          "markdownDescription": "Denies the start_upload_stream command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the stop_upload_stream command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-stop-upload-stream",
+          "markdownDescription": "Enables the stop_upload_stream command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the stop_upload_stream command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-stop-upload-stream",
+          "markdownDescription": "Denies the stop_upload_stream command without any pre-configured scope."
+        },
+        {
           "description": "Enables the write_shared_buffer_windows command without any pre-configured scope.",
           "type": "string",
           "const": "allow-write-shared-buffer-windows",
@@ -427,10 +451,10 @@
           "markdownDescription": "Denies the write_shared_buffer_windows_bytes command without any pre-configured scope."
         },
         {
-          "description": "Default permissions for the Memio plugin - allows zero-copy SharedBuffer operations\n#### This default permission set includes:\n\n- `allow-memio-upload`\n- `allow-memio-read`\n- `allow-prepare-upload-buffer`\n- `allow-commit-upload-buffer`\n- `allow-send-download-buffer`\n- `allow-create-shared-buffer-windows`\n- `allow-list-shared-buffers-windows`\n- `allow-has-shared-buffer`",
+          "description": "Default permissions for the Memio plugin - allows zero-copy SharedBuffer operations\n#### This default permission set includes:\n\n- `allow-memio-upload`\n- `allow-memio-read`\n- `allow-prepare-upload-buffer`\n- `allow-commit-upload-buffer`\n- `allow-send-download-buffer`\n- `allow-start-upload-stream`\n- `allow-stop-upload-stream`\n- `allow-create-shared-buffer-windows`\n- `allow-list-shared-buffers-windows`\n- `allow-has-shared-buffer`",
           "type": "string",
           "const": "default",
-          "markdownDescription": "Default permissions for the Memio plugin - allows zero-copy SharedBuffer operations\n#### This default permission set includes:\n\n- `allow-memio-upload`\n- `allow-memio-read`\n- `allow-prepare-upload-buffer`\n- `allow-commit-upload-buffer`\n- `allow-send-download-buffer`\n- `allow-create-shared-buffer-windows`\n- `allow-list-shared-buffers-windows`\n- `allow-has-shared-buffer`"
+          "markdownDescription": "Default permissions for the Memio plugin - allows zero-copy SharedBuffer operations\n#### This default permission set includes:\n\n- `allow-memio-upload`\n- `allow-memio-read`\n- `allow-prepare-upload-buffer`\n- `allow-commit-upload-buffer`\n- `allow-send-download-buffer`\n- `allow-start-upload-stream`\n- `allow-stop-upload-stream`\n- `allow-create-shared-buffer-windows`\n- `allow-list-shared-buffers-windows`\n- `allow-has-shared-buffer`"
         }
       ]
     }

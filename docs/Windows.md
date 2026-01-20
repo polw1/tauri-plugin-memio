@@ -7,6 +7,8 @@ This document describes the communication architecture between the Rust backend 
 The Windows implementation uses:
 - **READ (Back→Front)**: WebView2 SharedBuffer API with `PostSharedBufferToScript`
 - **WRITE (Front→Back)**: WebView2 SharedBuffer API with direct memory access
+  - Small writes: single SharedBuffer + commit_upload_buffer`r
+  - Large writes: control-ring stream (SharedBuffers + control queue)
 
 Unlike Android and Linux, Windows uses **WebView2's native SharedBuffer API** for data transfer between Rust and JavaScript.
 
@@ -95,6 +97,8 @@ Unlike Android and Linux, Windows uses **WebView2's native SharedBuffer API** fo
 ---
 
 ## WRITE: Frontend → Backend (JavaScript → Rust)
+
+### Small Writes (single buffer)
 
 ### Data Flow
 
@@ -192,6 +196,42 @@ Unlike Android and Linux, Windows uses **WebView2's native SharedBuffer API** fo
 ```
 ---
 
+### Large Writes (streaming with control ring)
+
+For large files, JS avoids per-chunk IPC. Rust creates a control SharedBuffer
+that acts as a ring queue of descriptors and spawns a worker thread to drain it.
+JS runs the streaming loop in a Web Worker to avoid blocking the UI thread.
+
+Flow:
+1. JS calls start_upload_stream with { name, totalLength, chunkSize, bufferCount, version }.
+2. Rust creates:
+   - Control buffer ${name}__ctrl (header + ring entries)
+   - Data buffers ${name}__data_{i} for ufferCount
+   - Posts all buffers to JS.
+3. JS worker writes each chunk into a data buffer and enqueues a descriptor:
+   { bufferIndex, length, offset, finalize } into the control ring.
+4. Rust worker reads the ring and calls
+   memio_platform::windows::write_chunk_from_ptr(...) for each entry.
+5. JS waits until head == tail and calls stop_upload_stream.
+
+Control header (16 bytes):
+`
+offset  size  field
+0       4     head (u32)
+4       4     tail (u32)
+8       4     capacity (u32)
+12      4     entry_size (u32)
+`
+
+Control entry (24 bytes):
+`
+offset  size  field
+0       4     buffer_index (u32)
+4       4     length (u32)
+8       8     offset (u64)
+16      4     finalize (u32)
+20      4     reserved (u32)
+`
 ## Implementation Files
 
 ### Rust
@@ -391,3 +431,7 @@ Offset  Size   Field      Description
 - [PostSharedBufferToScript](https://learn.microsoft.com/en-us/microsoft-edge/webview2/reference/win32/icorewebview2_17#postsharedbuffertoscript) - Send SharedBuffer to JavaScript.
 - [webview2-com Crate](https://crates.io/crates/webview2-com) - Rust bindings for WebView2.
 - [WebView2 Release Notes](https://learn.microsoft.com/en-us/microsoft-edge/webview2/release-notes) - Version history and feature availability.
+
+
+
+

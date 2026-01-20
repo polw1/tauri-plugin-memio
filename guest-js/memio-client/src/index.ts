@@ -66,3 +66,5 @@ export type { SharedStateManifest, SharedStateSnapshot, SharedStateWriteResult, 
 // =============================================================================
 export { memioRead, memioWrite, memioUpload, memioUploadFile } from './unified';
 export type { MemioReadResult, MemioWriteResult } from './unified';
+// Windows bootstrap helper (call early on startup to wire SharedBuffer listener)
+export { bootstrapWindowsSharedBuffer } from './platform/windows';

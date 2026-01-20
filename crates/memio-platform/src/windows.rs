@@ -185,6 +185,32 @@ impl WindowsSharedMemoryRegion {
             owns_handle: false, // We don't own this - it's a secondary view
         })
     }
+
+    pub fn write_from_ptr(&mut self, version: u64, src_ptr: *const u8, length: usize) -> Result<SharedStateInfo, MemioError> {
+        if length > self.capacity {
+            return Err(MemioError::DataTooLarge {
+                data_len: length,
+                capacity: self.capacity,
+            });
+        }
+
+        unsafe {
+            let data_ptr = self.ptr.add(HEADER_SIZE);
+            ptr::copy_nonoverlapping(src_ptr, data_ptr, length);
+        }
+
+        let header_slice = unsafe { std::slice::from_raw_parts_mut(self.ptr, HEADER_SIZE) };
+        write_header_unchecked(header_slice, version, length);
+
+        Ok(SharedStateInfo {
+            name: self.name.clone(),
+            path: None,
+            fd: None,
+            version,
+            length,
+            capacity: self.capacity,
+        })
+    }
 }
 
 impl Drop for WindowsSharedMemoryRegion {
@@ -392,6 +418,135 @@ pub fn read_from_shared(name: &str) -> Result<(u64, Vec<u8>), String> {
     Ok((info.version, data))
 }
 
+/// Reads header info (version, length) from a memio region without copying the data.
+pub fn read_shared_info(name: &str) -> Result<(u64, usize), String> {
+    let active = ACTIVE_REGIONS.lock().unwrap();
+    if let Some(handle) = active.get(name) {
+        let header_slice = unsafe { std::slice::from_raw_parts(handle.ptr, HEADER_SIZE) };
+        let (version, length) =
+            read_header(header_slice, handle.capacity).ok_or("Invalid header")?;
+        return Ok((version, length));
+    }
+    drop(active);
+
+    let region = WindowsSharedMemoryRegion::open(name).map_err(|e| e.to_string())?;
+    let header_slice = unsafe { std::slice::from_raw_parts(region.ptr, HEADER_SIZE) };
+    let (version, length) =
+        read_header(header_slice, region.capacity).ok_or("Invalid header")?;
+    Ok((version, length))
+}
+
+/// Copies data from a memio region into a destination pointer without extra allocations.
+pub fn copy_shared_to_ptr(name: &str, dest_ptr: *mut u8, expected_length: usize) -> Result<(), String> {
+    let active = ACTIVE_REGIONS.lock().unwrap();
+    if let Some(handle) = active.get(name) {
+        let header_slice = unsafe { std::slice::from_raw_parts(handle.ptr, HEADER_SIZE) };
+        let (_, length) =
+            read_header(header_slice, handle.capacity).ok_or("Invalid header")?;
+        if length != expected_length {
+            return Err(format!(
+                "Length mismatch: header {} != expected {}",
+                length, expected_length
+            ));
+        }
+        unsafe {
+            let data_ptr = handle.ptr.add(HEADER_SIZE);
+            ptr::copy_nonoverlapping(data_ptr, dest_ptr, length);
+        }
+        return Ok(());
+    }
+    drop(active);
+
+    let region = WindowsSharedMemoryRegion::open(name).map_err(|e| e.to_string())?;
+    let header_slice = unsafe { std::slice::from_raw_parts(region.ptr, HEADER_SIZE) };
+    let (_, length) =
+        read_header(header_slice, region.capacity).ok_or("Invalid header")?;
+    if length != expected_length {
+        return Err(format!(
+            "Length mismatch: header {} != expected {}",
+            length, expected_length
+        ));
+    }
+    unsafe {
+        let data_ptr = region.ptr.add(HEADER_SIZE);
+        ptr::copy_nonoverlapping(data_ptr, dest_ptr, length);
+    }
+    Ok(())
+}
+
+/// Writes a chunk from a raw pointer into a memio region at the given offset.
+/// If finalize is provided, the header is updated with the final version/length.
+pub fn write_chunk_from_ptr(
+    name: &str,
+    src_ptr: *const u8,
+    offset: usize,
+    length: usize,
+    finalize: Option<(u64, usize)>,
+) -> Result<(), String> {
+    let active = ACTIVE_REGIONS.lock().unwrap();
+    if let Some(handle) = active.get(name) {
+        if offset + length > handle.capacity {
+            return Err(format!(
+                "Chunk out of bounds: offset {} + length {} > capacity {}",
+                offset, length, handle.capacity
+            ));
+        }
+        unsafe {
+            let data_ptr = handle.ptr.add(HEADER_SIZE + offset);
+            ptr::copy_nonoverlapping(src_ptr, data_ptr, length);
+        }
+        if let Some((version, total_length)) = finalize {
+            if total_length > handle.capacity {
+                return Err(format!(
+                    "Total length too large: {} > capacity {}",
+                    total_length, handle.capacity
+                ));
+            }
+            if total_length < offset + length {
+                return Err(format!(
+                    "Total length {} smaller than written bytes {}",
+                    total_length,
+                    offset + length
+                ));
+            }
+            let header_slice = unsafe { std::slice::from_raw_parts_mut(handle.ptr, HEADER_SIZE) };
+            write_header_unchecked(header_slice, version, total_length);
+        }
+        return Ok(());
+    }
+    drop(active);
+
+    let mut region = WindowsSharedMemoryRegion::open(name).map_err(|e| e.to_string())?;
+    if offset + length > region.capacity {
+        return Err(format!(
+            "Chunk out of bounds: offset {} + length {} > capacity {}",
+            offset, length, region.capacity
+        ));
+    }
+    unsafe {
+        let data_ptr = region.ptr.add(HEADER_SIZE + offset);
+        ptr::copy_nonoverlapping(src_ptr, data_ptr, length);
+    }
+    if let Some((version, total_length)) = finalize {
+        if total_length > region.capacity {
+            return Err(format!(
+                "Total length too large: {} > capacity {}",
+                total_length, region.capacity
+            ));
+        }
+        if total_length < offset + length {
+            return Err(format!(
+                "Total length {} smaller than written bytes {}",
+                total_length,
+                offset + length
+            ));
+        }
+        let header_slice = unsafe { std::slice::from_raw_parts_mut(region.ptr, HEADER_SIZE) };
+        write_header_unchecked(header_slice, version, total_length);
+    }
+    Ok(())
+}
+
 /// Writes data to memio region.
 pub fn write_to_shared(name: &str, version: u64, data: &[u8]) -> Result<(), String> {
     // First check if we have an active region
@@ -423,6 +578,38 @@ pub fn write_to_shared(name: &str, version: u64, data: &[u8]) -> Result<(), Stri
     let mut region = WindowsSharedMemoryRegion::open(name).map_err(|e| e.to_string())?;
 
     region.write(version, data).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+/// Writes data from a raw pointer into a memio region and updates the header.
+pub fn write_from_ptr(name: &str, version: u64, src_ptr: *const u8, length: usize) -> Result<(), String> {
+    let active = ACTIVE_REGIONS.lock().unwrap();
+    if let Some(handle) = active.get(name) {
+        if length > handle.capacity {
+            return Err(format!(
+                "Data too large: {} > {}",
+                length,
+                handle.capacity
+            ));
+        }
+
+        unsafe {
+            let data_ptr = handle.ptr.add(HEADER_SIZE);
+            ptr::copy_nonoverlapping(src_ptr, data_ptr, length);
+        }
+
+        let header_slice = unsafe { std::slice::from_raw_parts_mut(handle.ptr, HEADER_SIZE) };
+        write_header_unchecked(header_slice, version, length);
+
+        return Ok(());
+    }
+    drop(active);
+
+    let mut region = WindowsSharedMemoryRegion::open(name).map_err(|e| e.to_string())?;
+    region
+        .write_from_ptr(version, src_ptr, length)
+        .map_err(|e| e.to_string())?;
+
     Ok(())
 }
 

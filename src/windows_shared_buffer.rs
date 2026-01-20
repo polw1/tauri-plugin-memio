@@ -1,6 +1,6 @@
-//! Windows WebView2 SharedBuffer API for direct data transfer.
+//! Windows WebView2 SharedBuffer API for data transfer.
 //!
-//! This module uses WebView2's native SharedBuffer API for efficient
+//! This module uses WebView2's SharedBuffer API for
 //! bidirectional data transfer between JavaScript and Rust.
 //!
 //! Key APIs:
@@ -116,29 +116,6 @@ pub fn post_buffer_to_script(
     }
 
     Ok(())
-}
-
-/// Read data from a SharedBuffer (after JS has written to it).
-pub fn read_from_buffer(name: &str, offset: usize, length: usize) -> Result<Vec<u8>, String> {
-    let registry = get_registry().lock().unwrap();
-
-    let entry = registry
-        .get(name)
-        .ok_or_else(|| format!("Buffer '{}' not found", name))?;
-
-    if offset + length > entry.size as usize {
-        return Err(format!(
-            "Read out of bounds: offset {} + length {} > size {}",
-            offset, length, entry.size
-        ));
-    }
-
-    unsafe {
-        let src = entry.ptr.add(offset);
-        let mut data = vec![0u8; length];
-        std::ptr::copy_nonoverlapping(src, data.as_mut_ptr(), length);
-        Ok(data)
-    }
 }
 
 /// Write data to a SharedBuffer (before sending to JS).

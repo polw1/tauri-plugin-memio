@@ -10,6 +10,12 @@
 
 import { invoke } from '@tauri-apps/api/core';
 
+/** Ensures we only wire the SharedBuffer listener once. */
+let listenerInitialized = false;
+
+const LARGE_FILE_THRESHOLD = 100 * 1024 * 1024;
+const STREAM_CHUNK_SIZE = 10 * 1024 * 1024;
+
 /**
  * Checks if running on Windows platform.
  */
@@ -43,6 +49,7 @@ export function hasWindowsSharedBuffer(): boolean {
  * These are SharedBuffers with ReadWrite access for direct uploads.
  */
 const pendingUploadBuffers = new Map<string, ArrayBuffer>();
+const pendingControlBuffers = new Map<string, ArrayBuffer>();
 
 /**
  * Pending download buffers received from Rust.
@@ -56,6 +63,27 @@ const pendingDownloadBuffers = new Map<string, { buffer: ArrayBuffer; version: b
 const pendingDownloadResolvers = new Map<string, Array<(result: { buffer: ArrayBuffer; version: bigint }) => void>>();
 
 // ============================================================================
+// Backend region helpers
+// ============================================================================
+
+/**
+ * Ensure the memio region exists on the backend before we try to write into it.
+ * Falls back gracefully if the command is unavailable.
+ */
+async function ensureMemioRegionExists(name: string, size: number): Promise<boolean> {
+  try {
+    const has = await invoke<boolean>('plugin:memio|has_shared_buffer', { name });
+    if (has) return true;
+
+    await invoke('plugin:memio|create_shared_buffer_windows', { name, size });
+    return true;
+  } catch (error) {
+    console.warn('[MemioWindows] Failed to ensure memio region exists:', error);
+    return false;
+  }
+}
+
+// ============================================================================
 // Initialization
 // ============================================================================
 
@@ -64,10 +92,14 @@ const pendingDownloadResolvers = new Map<string, Array<(result: { buffer: ArrayB
  * Call this once at application startup.
  */
 export function initWindowsSharedBuffer(): void {
+  if (listenerInitialized) return;
+
   if (!hasWindowsSharedBuffer()) {
     console.warn('[MemioWindows] WebView2 SharedBuffer not available');
     return;
   }
+
+  listenerInitialized = true;
 
   // @ts-expect-error - WebView2 API
   window.chrome.webview.addEventListener('sharedbufferreceived', (event: any) => {
@@ -79,6 +111,7 @@ export function initWindowsSharedBuffer(): void {
         version?: number;
         size?: number;
         forUpload?: boolean;
+        forUploadControl?: boolean;
         forDownload?: boolean;
       };
       
@@ -98,6 +131,14 @@ export function initWindowsSharedBuffer(): void {
         const buffer: ArrayBuffer = event.getBuffer();
         pendingUploadBuffers.set(metadata.name, buffer);
         console.debug(`[MemioWindows] Upload buffer ready: ${metadata.name} (${metadata.size} bytes)`);
+        // DON'T close - we need to write to it!
+        return;
+      }
+
+      if (metadata.forUploadControl) {
+        const buffer: ArrayBuffer = event.getBuffer();
+        pendingControlBuffers.set(metadata.name, buffer);
+        console.debug(`[MemioWindows] Upload control buffer ready: ${metadata.name} (${metadata.size} bytes)`);
         // DON'T close - we need to write to it!
         return;
       }
@@ -124,19 +165,33 @@ export function initWindowsSharedBuffer(): void {
         }
         
         // Close the buffer handle
-        event.close();
+        if (typeof event.close === 'function') {
+          event.close();
+        }
         return;
       }
 
       // Unknown buffer type
       console.warn('[MemioWindows] Unknown SharedBuffer type:', metadata);
-      event.close();
+      if (typeof event.close === 'function') {
+        event.close();
+      }
     } catch (error) {
       console.error('[MemioWindows] Error handling SharedBuffer event:', error);
     }
   });
 
   console.debug('[MemioWindows] SharedBuffer listener initialized');
+}
+
+/**
+ * Safe bootstrap helper: initialize the listener only when WebView2 is present.
+ * Call as early as possible in app startup.
+ */
+export function bootstrapWindowsSharedBuffer(): void {
+  if (typeof window === 'undefined') return;
+  if (!hasWindowsSharedBuffer()) return;
+  initWindowsSharedBuffer();
 }
 
 // ============================================================================
@@ -163,6 +218,12 @@ export async function uploadViaSharedBuffer(
 ): Promise<boolean> {
   try {
     console.debug(`[MemioWindows] Upload: ${data.length} bytes to '${name}'`);
+
+    // Ensure the backend region exists before we start the SharedBuffer flow
+    const regionReady = await ensureMemioRegionExists(name, data.length);
+    if (!regionReady) {
+      throw new Error('Memio region not available on backend');
+    }
     
     // Step 1: Ask Rust to create SharedBuffer and post it to us
     const prepareResult = await invoke<{ name: string; size: number; ready: boolean }>(
@@ -196,9 +257,11 @@ export async function uploadViaSharedBuffer(
     
     // Step 4: Commit - tell Rust to read from the SharedBuffer
     await invoke('plugin:memio|commit_upload_buffer', {
-      name,
-      version,
-      length: data.length,
+      args: {
+        name,
+        version,
+        length: data.length,
+      },
     });
     
     // Clean up
@@ -211,6 +274,195 @@ export async function uploadViaSharedBuffer(
     console.error('[MemioWindows] Upload failed:', error);
     return false;
   }
+}
+
+/**
+ * Upload a File via SharedBuffer streaming (large files).
+ * Uses a fixed SharedBuffer chunk and commits each chunk by offset.
+ */
+export async function uploadFileViaSharedBufferStream(
+  name: string,
+  file: File,
+  version: number,
+  chunkSize = STREAM_CHUNK_SIZE
+): Promise<boolean> {
+  try {
+    console.debug(`[MemioWindows] Stream upload: ${file.size} bytes to '${name}'`);
+
+    const regionReady = await ensureMemioRegionExists(name, file.size);
+    if (!regionReady) {
+      throw new Error('Memio region not available on backend');
+    }
+
+    const sharedSize = Math.min(chunkSize, file.size);
+    const bufferCount = 8;
+
+    const startResult = await invoke<{
+      controlName: string;
+      bufferNames: string[];
+      capacity: number;
+      entrySize: number;
+    }>('plugin:memio|start_upload_stream', {
+      args: {
+        name,
+        totalLength: file.size,
+        chunkSize: sharedSize,
+        bufferCount,
+        version,
+      },
+    });
+
+    const waitForBuffer = async (
+      bufferName: string,
+      map: Map<string, ArrayBuffer>,
+      timeoutMs = 1000
+    ): Promise<ArrayBuffer> => {
+      const startWait = performance.now();
+      while ((performance.now() - startWait) < timeoutMs) {
+        const buffer = map.get(bufferName);
+        if (buffer) return buffer;
+        await new Promise(r => setTimeout(r, 1));
+      }
+      throw new Error(`Buffer '${bufferName}' not received`);
+    };
+
+    const controlBuffer = await waitForBuffer(startResult.controlName, pendingControlBuffers);
+    const dataBuffers = await Promise.all(
+      startResult.bufferNames.map(async (bufferName) => {
+        const uploadBuffer = await waitForBuffer(bufferName, pendingUploadBuffers);
+        return uploadBuffer;
+      })
+    );
+
+    pendingControlBuffers.delete(startResult.controlName);
+    for (const bufferName of startResult.bufferNames) {
+      pendingUploadBuffers.delete(bufferName);
+    }
+
+    const workerSource = `
+      self.onmessage = async (event) => {
+        const { file, controlBuffer, dataBuffers, totalLength } = event.data;
+        const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+        try {
+          const controlView = new DataView(controlBuffer);
+          const queueCapacity = controlView.getUint32(8, true);
+          const entrySize = controlView.getUint32(12, true);
+          if (!queueCapacity || !entrySize) {
+            throw new Error('Invalid control buffer header');
+          }
+
+          const dataViews = dataBuffers.map((buf) => new Uint8Array(buf));
+          const CONTROL_HEADER_SIZE = 16;
+          const CONTROL_ENTRY_SIZE = entrySize;
+          let tail = controlView.getUint32(4, true);
+
+          const reader = file.stream().getReader();
+          let pendingChunk = null;
+          let pendingOffset = 0;
+          let offset = 0;
+
+          while (offset < totalLength) {
+            let head = controlView.getUint32(0, true);
+            while ((tail - head) >= queueCapacity) {
+              await sleep(1);
+              head = controlView.getUint32(0, true);
+            }
+
+            const bufferIndex = tail % dataViews.length;
+            const dataView = dataViews[bufferIndex];
+            const wanted = Math.min(dataView.byteLength, totalLength - offset);
+
+            if (!pendingChunk || pendingOffset >= pendingChunk.byteLength) {
+              const { value, done } = await reader.read();
+              if (done || !value) break;
+              pendingChunk = value;
+              pendingOffset = 0;
+            }
+
+            if (!pendingChunk) break;
+
+            const remaining = pendingChunk.byteLength - pendingOffset;
+            const toCopy = Math.min(remaining, wanted);
+            dataView.set(pendingChunk.subarray(pendingOffset, pendingOffset + toCopy), 0);
+            pendingOffset += toCopy;
+
+            if (toCopy === 0) break;
+
+            const finalize = offset + toCopy >= totalLength;
+            const entryIndex = tail % queueCapacity;
+            const entryOffset = CONTROL_HEADER_SIZE + (entryIndex * CONTROL_ENTRY_SIZE);
+            controlView.setUint32(entryOffset, bufferIndex, true);
+            controlView.setUint32(entryOffset + 4, toCopy, true);
+            controlView.setBigUint64(entryOffset + 8, BigInt(offset), true);
+            controlView.setUint32(entryOffset + 16, finalize ? 1 : 0, true);
+            controlView.setUint32(entryOffset + 20, 0, true);
+
+            tail += 1;
+            controlView.setUint32(4, tail, true);
+            offset += toCopy;
+          }
+
+          try { reader.releaseLock(); } catch {}
+
+          while (controlView.getUint32(0, true) !== tail) {
+            await sleep(1);
+          }
+
+          self.postMessage({ status: 'ok', offset });
+        } catch (error) {
+          const message = error && error.message ? error.message : String(error);
+          self.postMessage({ status: 'error', message });
+        }
+      };
+    `;
+
+    const workerUrl = URL.createObjectURL(new Blob([workerSource], { type: 'text/javascript' }));
+    const worker = new Worker(workerUrl);
+
+    const workerResult = new Promise<void>((resolve, reject) => {
+      worker.onmessage = (event) => {
+        const data = event.data;
+        if (data && data.status === 'ok') {
+          resolve();
+        } else {
+          reject(new Error(data?.message || 'Upload worker failed'));
+        }
+      };
+      worker.onerror = (event) => {
+        reject(new Error(event.message || 'Upload worker error'));
+      };
+    });
+
+    try {
+      worker.postMessage(
+        {
+          file,
+          controlBuffer,
+          dataBuffers,
+          totalLength: file.size,
+        },
+        [controlBuffer, ...dataBuffers]
+      );
+
+      await workerResult;
+    } finally {
+      worker.terminate();
+      URL.revokeObjectURL(workerUrl);
+    }
+
+    await invoke('plugin:memio|stop_upload_stream', { name });
+
+    console.debug(`[MemioWindows] Stream upload complete: ${file.size} bytes (v${version})`);
+    return true;
+  } catch (error) {
+    console.error('[MemioWindows] Stream upload failed:', error);
+    return false;
+  }
+}
+
+export function shouldStreamUpload(byteLength: number): boolean {
+  return byteLength > LARGE_FILE_THRESHOLD;
 }
 
 /**

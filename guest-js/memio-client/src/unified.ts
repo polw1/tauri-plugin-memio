@@ -184,6 +184,20 @@ export async function memioUploadFile(
     return memioUpload(bufferName, uri);
   }
 
+  if (platform === 'windows') {
+    const { uploadFileViaSharedBufferStream, shouldStreamUpload } = await import('./platform/windows');
+    if (shouldStreamUpload(file.size)) {
+      const version = Date.now();
+      const success = await uploadFileViaSharedBufferStream(bufferName, file, version);
+      return {
+        success,
+        bytesWritten: success ? file.size : 0,
+        version: BigInt(version),
+        durationMs: performance.now() - start,
+      };
+    }
+  }
+
   const buffer = await file.arrayBuffer();
   const bytes = new Uint8Array(buffer);
   const success = await writeMemioSharedBuffer(bufferName, bytes);
@@ -309,15 +323,15 @@ async function writeWindows(
   const { uploadViaSharedBuffer, hasSharedBufferUpload } = await import('./platform/windows');
   
   if (!hasSharedBufferUpload()) {
-    return writeViaInvoke(bufferName, data, start);
+    throw new Error('Windows SharedBuffer upload not available');
   }
   
   const version = Date.now();
-  await uploadViaSharedBuffer(bufferName, data, version);
+  const success = await uploadViaSharedBuffer(bufferName, data, version);
   
   return {
-    success: true,
-    bytesWritten: data.length,
+    success,
+    bytesWritten: success ? data.length : 0,
     version: BigInt(version),
     durationMs: performance.now() - start,
   };

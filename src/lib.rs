@@ -59,6 +59,10 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             windows::commit_upload_buffer,
             #[cfg(target_os = "windows")]
             windows::send_download_buffer,
+            #[cfg(target_os = "windows")]
+            windows::start_upload_stream,
+            #[cfg(target_os = "windows")]
+            windows::stop_upload_stream,
             // Utility commands
             #[cfg(target_os = "windows")]
             windows::create_shared_buffer_windows,

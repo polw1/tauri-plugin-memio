@@ -10,6 +10,8 @@ permissions = [
     "allow-prepare-upload-buffer",
     "allow-commit-upload-buffer",
     "allow-send-download-buffer",
+    "allow-start-upload-stream",
+    "allow-stop-upload-stream",
     # Utility commands
     "allow-create-shared-buffer-windows",
     "allow-list-shared-buffers-windows",
